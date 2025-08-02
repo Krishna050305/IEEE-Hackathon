@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus-Clinic - Optimal Consulting Solution</title>
+    <link rel="stylesheet" href="static/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+    <header class="main-header">
+        <nav class="navbar">
+            <div class="logo">
+                <a href="#">
+                    <img src="./static/images/logo.jpg" alt="Nexus-Clinic Logo">
+                    Nexus-Clinic
+                </a>
+            </div>
+            <ul class="nav-links">
+                <li><a href="#">Home</a></li>
+                <li class="has-dropdown">
+                    <a href="#">Pages <i class="fas fa-chevron-down nav-arrow"></i></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Our Team</a></li>
+                        <li><a href="#">FAQs</a></li>
+                    </ul>
+                </li>
+                <li class="has-dropdown">
+                    <a href="#">Services <i class="fas fa-chevron-down nav-arrow"></i></a>
+                    <ul class="dropdown-menu">
+                            <li><a href="/Cardiology">Cardiologist</a></li>
+                            <li><a href="/Pediatrician">Pediatrician</a></li>
+                            <li><a href="/Dental">Dentist</a></li>
+                            <li><a href="/Psychiatrist">Psychiatrist</a></li>
+                            <li><a href="/Neurology">Neurologist</a></li>
+                            <li><a href="/Orthopedic">Orthopedician</a></li>
+                            <li><a href="/Gynecology">Gynecologist</a></li>
+
+                    </ul>
+                </li>
+
+                <li class="has-dropdown">
+                    <a href="#">News <i class="fas fa-chevron-down nav-arrow"></i></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#">Latest News</a></li>
+                        <li><a href="#">Blog</a></li>
+                    </ul>
+                </li>
+                <li><a href="#">Contacts</a></li>
+            </ul>
+            <div class="nav-utility-icons">
+                <div class="call-info">
+                    <span>Call Emergency</span>
+                    <span class="phone-number">2381-50060070</span>
+                </div>
+                {% if user_name %}
+                  <div class="dropdown">
+                    <a class="btn btn-primary dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">
+                      Hello, {{ user_name }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuLink">
+                      <li><a class="dropdown-item" href="/dashboard">Dashboard</a></li>
+                      <li><a class="dropdown-item" href="/logout">Logout</a></li>
+                    </ul>
+                  </div>
+                {% else %}
+                  <a href="/patient/login" class="btn btn-primary btn-login">Patient Login</a>
+                  <a href="/doctor/login" class="btn btn-primary btn-signup">Doctor Login</a>
+                {% endif %}
+
+
+            </div>
+            <div class="menu-toggle" id="mobile-menu-toggle">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </nav>
+    </header>
+<main>
+        <h1>Welcome to Nexus Clinic</h1>
+        <p>This is placeholder content for your main page. Scroll down to see the footer.</p>
+        <div style="height: 600px;"></div>
+     </main>
+    <section class="hero-section" id="hero-slider">
+        <div class="hero-content-wrapper">
+            <div class="hero-text-content">
+                <h1>We Care About <br>Your Body And Mind</h1>
+                <p>Finding the right doctor and booking an appointment has never been easier. This intuitive website lets you seamlessly search for doctors by specialty and location, then book your preferred time slot with just a few clicks. Take control of your healthcare journey today!.</p>
+
+            </div>
+            <div class="hero-image-content">
+                <img src="./static/images/doctor.jpg" alt="Medical Team">
+            </div>
+
+        </div>
+        <div class="hero-bg-elements">
+            <img class="bg-element bg-heartbeat" src="https://in.pinterest.com/pin/38562140556516138/." alt="Heartbeat line">
+            <img class="bg-element bg-tooth" src="https://via.placeholder.com/50x50/transparent?text=." alt="Tooth icon">
+            <img class="bg-element bg-pulse" src="https://via.placeholder.com/80x80/transparent?text=." alt="Pulse icon">
+            <img class="bg-element bg-brain" src="https://via.placeholder.com/70x70/transparent?text=." alt="Brain icon">
+        </div>
+        <div class="hero-nav-arrow hero-nav-left" id="slider-prev"><i class="fas fa-chevron-left"></i></div>
+        <div class="hero-nav-arrow hero-nav-right" id="slider-next"><i class="fas fa-chevron-right"></i></div>
+    </section>
+
+    <section class="quick-actions-section">
+        <div class="action-card">
+            <i class="fas fa-hands-holding-child"></i>
+            <h3>Our Services Providers</h3>
+            <a href="#" class="arrow-btn"><i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+        <div class="action-card">
+            <i class="fas fa-calendar-check"></i>
+            <h3>Book an Appointment</h3>
+            <a href="#" class="arrow-btn"><i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+        <div class="action-card call-card">
+            <i class="fas fa-phone-alt"></i>
+            <div class="call-content">
+                <span>Call Us Anytime</span>
+                <span class="call-number">2381-50060070</span>
+            </div>
+            <a href="#" class="arrow-btn"><i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+    </section>
+<body>
+
+    <a href="#" class="back-to-top" id="backToTopBtn" aria-label="Back to top">
+  <i class="fa-solid fa-arrow-up"></i>
+</a>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="#">Home</a></li>
+                    <li><a href="#">About Us</a></li>
+                    <li><a href="#">Services</a></li>
+                    <li><a href="#">Shop</a></li>
+                    <li><a href="#">News</a></li>
+                    <li><a href="#">Contacts</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-contact">
+                <h3>Contact Us</h3>
+                <ul>
+                    <li>Email: adminnexus@gmail.com</li>
+                    <li>Phone: 2381-50060070</li>
+                    <li>Locations: Shivaji Nagar, Kharadi, Hadapsar, Dhankawadi, FC Road, JM Road, Kadki, Camp, Sangamwadi, Viman Nagar, Lohagaon, Bhosari, Ramwadi, Sinhagad Road, Katraj, Koregaon Park.</li>
+                </ul>
+            </div>
+            </div>
+
+        <div class="footer-base">
+            <p>Copyrights © 2025. All Rights Reserved</p>
+        </div>
+    </footer>
+
+    <script src="static/js/script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

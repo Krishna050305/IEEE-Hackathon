@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <h2>Meet Our {{ specialization }} Specialists</h2>
+    <div class="doctor-list">
+      {% for doc in doctors %}
+          <div class="doctor-card">
+            <h3>Dr. {{ doc.full_name }}</h3>
+            <p>Clinic: {{ doc.clinic_name }}</p>
+            <p>Location: {{ doc.clinic_location }}</p>
+            <a href="/book/{{ doc._id }}" class="btn btn-appointment">Book Appointment</a>
+          </div>
+    {% endfor %}
+    </div>
+</body>
+</html>

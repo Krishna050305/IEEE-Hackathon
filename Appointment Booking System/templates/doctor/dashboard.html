@@ -1,0 +1,15 @@
+<h2>My Appointments</h2>
+<table class="table table-bordered">
+  <thead><tr><th>Patient</th><th>Clinic</th><th>Location</th><th>Time</th></tr></thead>
+  <tbody>
+    {% for appt in appointments %}
+      <tr>
+        <td>{{ appt.patient_name }}</td>
+        <td>{{ appt.clinic_name }}</td>
+        <td>{{ appt.clinic_location }}</td>
+        <td>{{ appt.slot }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
