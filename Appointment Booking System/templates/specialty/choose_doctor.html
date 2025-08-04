@@ -1,20 +1,89 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Choose Doctor - {{ specialization }}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            padding: 30px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        .doctor-list {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .doctor-card {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 320px;
+            transition: transform 0.2s;
+        }
+
+        .doctor-card:hover {
+            transform: translateY(-5px);
+            background-color: #eef7ff;
+        }
+
+        .doctor-card h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+
+        .doctor-card p {
+            margin: 5px 0;
+        }
+
+        .doctor-card a button {
+            margin-top: 10px;
+            background-color: #28a745;
+            border: none;
+            color: white;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            width: 100%;
+            font-size: 15px;
+        }
+
+        .doctor-card a button:hover {
+            background-color: #218838;
+        }
+    </style>
 </head>
 <body>
-    <h2>Meet Our {{ specialization }} Specialists</h2>
-    <div class="doctor-list">
-      {% for doc in doctors %}
-          <div class="doctor-card">
-            <h3>Dr. {{ doc.full_name }}</h3>
-            <p>Clinic: {{ doc.clinic_name }}</p>
-            <p>Location: {{ doc.clinic_location }}</p>
-            <a href="/book/{{ doc._id }}" class="btn btn-appointment">Book Appointment</a>
-          </div>
-    {% endfor %}
-    </div>
+    <h2>Available Doctors for {{ specialization }}</h2>
+
+    {% if doctors %}
+        <div class="doctor-list">
+            {% for doc in doctors %}
+                <div class="doctor-card">
+                    <h3>{{ doc.full_name }}</h3>
+                    <p><strong>Specialization:</strong> {{ doc.specialization }}</p>
+                    <p><strong>Phone:</strong> {{ doc.phone_number }}</p>
+                    <p><strong>Timings:</strong> {{ doc.opening_hours }} - {{ doc.closing_hours }}</p>
+                    <p><strong>Clinic:</strong> {{ doc.clinic_name }}</p>
+                    <p><strong>Address:</strong> {{ doc.clinic_address }}</p>
+                    <a href="/book/{{ doc._id }}">
+                        <button>Book Appointment</button>
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p style="text-align:center;">No doctors available for this specialization at the selected clinic.</p>
+    {% endif %}
 </body>
 </html>
