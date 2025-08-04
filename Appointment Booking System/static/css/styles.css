@@ -70,6 +70,18 @@
            color: #555;
        }
 
+.flow-in-text {
+  opacity: 0;
+  transform: translateX(-40px);
+  animation: flowIn 1s ease-out forwards;
+}
+
+@keyframes flowIn {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
 
        .btn {
            display: inline-block;
