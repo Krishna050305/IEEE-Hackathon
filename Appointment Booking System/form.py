@@ -21,5 +21,3 @@ class AdminLoginForm(FlaskForm):
     email = StringField('Email', validators=[Email()])
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Login as Admin')
-
-
