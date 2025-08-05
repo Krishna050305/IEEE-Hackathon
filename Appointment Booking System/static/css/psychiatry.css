@@ -22,8 +22,8 @@
            min-height: 100vh;
            display: flex;
            flex-direction: column;
-
        }
+
        a {
            text-decoration: none;
            color: inherit;
@@ -1272,4 +1272,4 @@
         margin-bottom: 2rem;
         color: #f0f7f8;
         line-height: 1.6;
-    }}
+    }
