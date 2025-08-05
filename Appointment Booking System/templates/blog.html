@@ -2,9 +2,104 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="static/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/blog.css">
 </head>
 <body>
+    <header class="main-header">
+        <nav class="navbar">
+            <div class="logo">
+                <a href="/">
+                    <img src="./static/images/logo.jpg" alt="Nexus-Clinic Logo">
+                    Nexus-Clinic
+                </a>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/">Home</a></li>
+                <li class="has-dropdown">
+                    <a href="#">Pages <i class="fas fa-chevron-down nav-arrow"></i></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="/AboutUs">About Us</a></li>
+                        <li><a href="/OurTeam">Our Team</a></li>
+                        <li><a href="/Blog">Blog & FAQs</a></li>
+                        
+                    </ul>
+                </li>
+                <li class="has-dropdown">
+                    <a href="#">Services <i class="fas fa-chevron-down nav-arrow"></i></a>
+                    <ul class="dropdown-menu">
+                            <li><a href="/Cardiology">Cardiologist</a></li>
+                            <li><a href="/Pediatrician">Pediatrician</a></li>
+                            <li><a href="/Dentist">Dentist</a></li>
+                            <li><a href="/Psychiatrist">Psychiatrist</a></li>
+                            <li><a href="/Neurology">Neurologist</a></li>
+                            <li><a href="/Orthopedic">Orthopedician</a></li>
+                            <li><a href="/Gynecology">Gynecologist</a></li>
+
+                    </ul>
+                </li>
+
+                <li class="has-dropdown">
+                    <a href="#">News <i class="fas fa-chevron-down nav-arrow"></i></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="/LatestNews">Latest News</a></li>
+                        <li><a href="/Blog">Blog</a></li>
+                    </ul>
+                </li>
+                <li><a href="#">Contacts</a></li>
+            </ul>
+            <div class="nav-utility-icons">
+                <div class="call-info">
+                    <span>Call Emergency</span>
+                    <span class="phone-number">2381-50060070</span>
+                </div>
+                {% if user_name %}
+                    <div class="dropdown user-dropdown">
+                        <a href="#" class="btn btn-primary dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            Hello, {{ user_name }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            {% if request.session.get("role") == "doctor" %}
+                                <li><a class="nav-link" href="/doctor/dashboard">Dashboard</a></li>
+                            {% elif request.session.get("role") == "patient" %}
+                                <li><a class="nav-link" href="/patient/dashboard">Dashboard</a></li>
+                            {% endif %}
+                            <li><a class="dropdown-item" href="/logout">Logout</a></li>
+                        </ul>
+                    </div>
+                {% else %}
+                  <a href="/patient/login" class="btn btn-primary btn-login">Patient Login</a>
+                  <a href="/doctor/login" class="btn btn-primary btn-signup">Doctor Login</a>
+                {% endif %}
+
+
+            </div>
+            <div class="menu-toggle" id="mobile-menu-toggle">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </nav>
+    </header>
+    <main>
+        <section class="blog-section">
+            <div class="container">
+                <h1>Blog</h1>
+                <div class="blog-posts">
+                    {% for post in blog_posts %}
+                        <div class="blog-post">
+                            <h2>{{ post.title }}</h2>
+                            <p>{{ post.content }}</p>
+                            <span class="date">{{ post.date }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
 
 </body>
 </html>
