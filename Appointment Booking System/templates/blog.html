@@ -2,15 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Blog</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="static/css/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/blog.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Using the Inter font for a modern feel */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
 </head>
-<body>
-    <header class="main-header">
+<body class="bg-[url('bg.jpg')] bg-cover bg-center bg-no-repeat text-gray-800">
+      <header class="main-header">
         <nav class="navbar">
             <div class="logo">
                 <a href="/">
@@ -26,7 +29,6 @@
                         <li><a href="/AboutUs">About Us</a></li>
                         <li><a href="/OurTeam">Our Team</a></li>
                         <li><a href="/Blog">Blog & FAQs</a></li>
-                        
                     </ul>
                 </li>
                 <li class="has-dropdown">
@@ -43,13 +45,6 @@
                     </ul>
                 </li>
 
-                <li class="has-dropdown">
-                    <a href="#">News <i class="fas fa-chevron-down nav-arrow"></i></a>
-                    <ul class="dropdown-menu">
-                        <li><a href="/LatestNews">Latest News</a></li>
-                        <li><a href="/Blog">Blog</a></li>
-                    </ul>
-                </li>
                 <li><a href="#">Contacts</a></li>
             </ul>
             <div class="nav-utility-icons">
@@ -85,21 +80,135 @@
             </div>
         </nav>
     </header>
-    <main>
-        <section class="blog-section">
-            <div class="container">
-                <h1>Blog</h1>
-                <div class="blog-posts">
-                    {% for post in blog_posts %}
-                        <div class="blog-post">
-                            <h2>{{ post.title }}</h2>
-                            <p>{{ post.content }}</p>
-                            <span class="date">{{ post.date }}</span>
-                        </div>
-                    {% endfor %}
+
+    <section id="faqs" class="background-image:bg-[url('bg.jpg')] py-16 md:py-24">
+        <div class="container mx-auto px-4">
+            <div class="max-w-4xl mx-auto text-center mb-12">
+                <h2 class="text-3xl md:text-5xl font-extrabold text-[#2c3e50] mb-4">Frequently Asked Questions</h2>
+                <p class="text-lg md:text-xl text-gray-600">Find quick answers to the most common questions about our services.</p>
+            </div>
+
+            <div class="max-w-4xl mx-auto space-y-4">
+                
+                <div class="bg-gray-100 rounded-lg p-6 shadow-md">
+                    <details>
+                        <summary class="font-semibold text-lg text-[#555] cursor-pointer list-none flex justify-between items-center after:content-['+'] after:text-2xl after:text-blue-600 after:ml-2 after:transition-transform after:duration-300">
+                            What are your clinic's hours of operation?
+                        </summary>
+                        <p class="mt-4 text-gray-600">
+                            Our clinic is open from Monday to Friday, 9:00 AM to 5:00 PM. We are closed on weekends and major public holidays.
+                        </p>
+                    </details>
+                </div>
+                
+                <div class="bg-gray-100 rounded-lg p-6 shadow-md">
+                    <details>
+                        <summary class="font-semibold text-lg text-[#555] cursor-pointer list-none flex justify-between items-center after:content-['+'] after:text-2xl after:text-blue-600 after:ml-2 after:transition-transform after:duration-300">
+                            Do I need to book an appointment?
+                        </summary>
+                        <p class="mt-4 text-gray-600">
+                            Yes, we highly recommend booking an appointment in advance to ensure you can be seen by a doctor. You can schedule an appointment by calling us or using our online booking portal.
+                        </p>
+                    </details>
+                </div>
+                
+                <div class="bg-gray-100 rounded-lg p-6 shadow-md">
+                    <details>
+                        <summary class="font-semibold text-lg text-[#555] cursor-pointer list-none flex justify-between items-center after:content-['+'] after:text-2xl after:text-blue-600 after:ml-2 after:transition-transform after:duration-300">
+                            What insurance plans do you accept?
+                        </summary>
+                        <p class="mt-4 text-gray-600">
+                            We accept a wide range of insurance plans. Please contact our reception desk with your insurance information, and we can verify your coverage.
+                        </p>
+                    </details>
+                </div>
+
+                <div class="bg-gray-100 rounded-lg p-6 shadow-md">
+                    <details>
+                        <summary class="font-semibold text-lg text-[#555] cursor-pointer list-none flex justify-between items-center after:content-['+'] after:text-2xl after:text-blue-600 after:ml-2 after:transition-transform after:duration-300">
+                            How can I request a prescription refill?
+                        </summary>
+                        <p class="mt-4 text-gray-600">
+                            You can request a prescription refill by calling our office or through our patient portal. Please allow 48 hours for the refill to be processed.
+                        </p>
+                    </details>
                 </div>
             </div>
-        </section>
+        </div>
+    </section>
+
+    <section id="blogs" class="bg-[#f8f9fa]/50 py-16 md:py-24">
+        <div class="container mx-auto px-4">
+            <div class="max-w-4xl mx-auto text-center mb-12">
+                <h2 class="text-3xl md:text-5xl font-extrabold text-[#2c3e50] mb-4">Latest from Our Blog</h2>
+                <p class="text-lg md:text-xl text-[#555]">Stay informed with expert advice and health tips from our clinic.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                
+                <div class="bg-white rounded-lg shadow-xl overflow-hidden transform transition-transform hover:scale-105">
+                    <img src="https://placehold.co/600x400/1eb8cd/ffffff?text=Healthy+Living" alt="Healthy Living" class="w-full h-48 object-cover">
+                    <div class="p-6">
+                        <p class="text-gray-500 text-sm mb-2">March 25, 2025</p>
+                        <h3 class="text-xl font-bold text-[#1eb8cd] mb-2">The Importance of Regular Check-ups</h3>
+                        <p class="text-gray-600 text-sm mb-4 line-clamp-3">Discover why routine health screenings and preventative care are crucial for maintaining your long-term well-being and catching potential issues early.</p>
+                        <a href="#" class="inline-block text-[#1eb8cd] font-semibold hover:underline">Read more &rarr;</a>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-xl overflow-hidden transform transition-transform hover:scale-105">
+                    <img src="https://placehold.co/600x400/1eb8cd/ffffff?text=Nutrition" alt="Nutrition Guide" class="w-full h-48 object-cover">
+                    <div class="p-6">
+                        <p class="text-[#555] text-sm mb-2">March 18, 2025</p>
+                        <h3 class="text-xl font-bold text-[#1eb8cd] mb-2">A Beginner's Guide to Healthy Eating</h3>
+                        <p class="text-[#555] text-sm mb-4 line-clamp-3">Learn simple and effective tips to improve your diet, boost your energy, and support your overall health with a balanced nutrition plan.</p>
+                        <a href="#" class="inline-block text-[#1eb8cd] font-semibold hover:underline">Read more &rarr;</a>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow-xl overflow-hidden transform transition-transform hover:scale-105">
+                    <img src="https://placehold.co/600x400/1eb8cd/ffffff?text=Mental+Health" alt="Mental Health" class="w-full h-48 object-cover">
+                    <div class="p-6">
+                        <p class="text-gray-500 text-sm mb-2">March 11, 2025</p>
+                        <h3 class="text-xl font-bold text-[#1eb8cd] mb-2">Strategies for Managing Stress in Daily Life</h3>
+                        <p class="text-gray-600 text-sm mb-4 line-clamp-3">Our experts share practical advice and proven techniques to help you reduce stress and improve your mental well-being for a happier life.</p>
+                        <a href="#" class="inline-block text-[#1eb8cd] font-semibold hover:underline">Read more &rarr;</a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/AboutUs">About Us</a></li>
+                    <li><a href="/">Services</a></li>
+                    <li><a href="/News">News</a></li>
+                    <li><a href="/Contacts">Contacts</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-contact">
+                <h3>Contact Us</h3>
+                <ul>
+                    <li>Email: adminnexus@gmail.com</li>
+                    <li>Phone: 2381-50060070</li>
+                    <li>Locations: Shivaji Nagar, Kharadi, Hadapsar, Dhankawadi, FC Road, JM Road, Kadki, Camp, Sangamwadi, Viman Nagar, Lohagaon, Bhosari, Ramwadi, Sinhagad Road, Katraj, Koregaon Park.</li>
+                </ul>
+            </div>
+            </div>
+
+        <div class="footer-base">
+            <p>Copyrights © 2025. All Rights Reserved</p>
+        </div>
+    </footer>
+
 
 </body>
 </html>
+
