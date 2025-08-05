@@ -24,6 +24,15 @@
             text-align: left;
         }
 
+        .appointment-card {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
         h2 {
             color: #2c3e50;
             text-align: center;
@@ -66,13 +75,16 @@
     <div class="card">
         <h2>Appointment Details</h2>
 
-        <p><strong>Patient:</strong> {{ patient.name }}</p>
-        <p><strong>Doctor:</strong> {{ doctor.full_name }}</p>
-        <p><strong>Specialization:</strong> {{ doctor.specialization }}</p>
-        <p><strong>Clinic:</strong> {{ clinic.name }}</p>
-        <p><strong>Address:</strong> {{ clinic.address }}</p>
-        <p><strong>Date:</strong> {{ date }}</p>
-        <p><strong>Time:</strong> {{ slot }}</p>
+        {% for appt in appointments %}
+            <div class="appointment-card">
+                <p><strong>Doctor:</strong> {{ appt.doctor_name }}</p>
+                <p><strong>Specialization:</strong> {{ appt.specialization }}</p>
+                <p><strong>Clinic:</strong> {{ appt.clinic_name }}</p>
+                <p><strong>Address:</strong> {{ appt.clinic_address }}</p>
+                <p><strong>Date:</strong> {{ appt.date }}</p>
+                <p><strong>Time:</strong> {{ appt.slot }}</p>
+            </div>
+        {% endfor %}
 
         <p class="highlight">Appointment Booked!</p>
 

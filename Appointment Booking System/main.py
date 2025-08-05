@@ -123,28 +123,30 @@ async def post_patient_login(
     return RedirectResponse("/", status_code=302)
 
 @app.get("/patient/dashboard", response_class=HTMLResponse)
-async def patient_dashboard(
-    request: Request,
-    doctor_id: str = Query(None),
-    slot: str = Query(None),
-    date: str = Query(None)
-):
+async def patient_dashboard(request: Request):
     patient_id = request.session.get("user")
     if not patient_id:
         return RedirectResponse("/auth", status_code=status.HTTP_302_FOUND)
 
-    doctor = db["Doctors"].find_one({"_id": ObjectId(doctor_id)}) if doctor_id else None
-    clinic = db["Clinics"].find_one({"_id": doctor["clinic_id"]}) if doctor else None
     patient = db["Patients"].find_one({"_id": ObjectId(patient_id)})
+
+    # Fetch all appointments for this patient
+    appointments = list(db["Appointments"].find({"patient_id": ObjectId(patient_id)}))
+    for appt in appointments:
+        doctor = db["Doctors"].find_one({"_id": appt["doctor_id"]})
+        clinic = db["Clinics"].find_one({"_id": appt["clinic_id"]})
+
+        appt["doctor_name"] = doctor.get("full_name", "Unknown") if doctor else "Unknown"
+        appt["specialization"] = doctor.get("specialization", "N/A") if doctor else "N/A"
+        appt["clinic_name"] = clinic["name"] if clinic else "Unknown"
+        appt["clinic_address"] = clinic["address"] if clinic else "Unknown"
 
     return templates.TemplateResponse("patient/dashboard.html", {
         "request": request,
-        "doctor": doctor,
-        "clinic": clinic,
-        "slot": slot,
-        "date": date,
-        "patient": patient
+        "patient": patient,
+        "appointments": appointments
     })
+
 
 # Logout
 @app.get("/doctor/register", response_class=HTMLResponse)
@@ -365,7 +367,7 @@ async def show_specialty_page(request: Request, specialization: str, clinic_id: 
         "doctors": doctors
     })
 
-@app.get("/specialty/{specialization}", response_class=HTMLResponse)
+@app.get("/clinics/{specialization}", response_class=HTMLResponse)
 async def show_specialty_page(request: Request, specialization: str, clinic_id: str = Query(None)):
     query = {"specialization": specialization.capitalize()}
 
