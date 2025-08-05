@@ -57,10 +57,14 @@
                           <a href="#" class="btn btn-primary dropdown-toggle">
                             Hello, {{ user_name }}
                           </a>
-                          <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/dashboard">Dashboard</a></li>
+                          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            {% if request.session.get("role") == "doctor" %}
+                                <li><a class="nav-link" href="/doctor/dashboard">Dashboard</a></li>
+                            {% elif request.session.get("role") == "patient" %}
+                                <li><a class="nav-link" href="/patient/dashboard">Dashboard</a></li>
+                            {% endif %}
                             <li><a class="dropdown-item" href="/logout">Logout</a></li>
-                          </ul>
+                        </ul>
                         </div>
 
                     {% else %}
@@ -98,7 +102,7 @@
             <p>"Ready to prioritize your body health?</p>
             <p>"Book an appointment with our experienced Dentists today."</p>
           </div>
-          <a href="/specialty/Dental" class="btn-appointment">Book Appointment</a>
+          <a href="/specialty/Dentist" class="btn-appointment">Book Appointment</a>
         </div>
       </section>
         </section>
