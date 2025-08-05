@@ -47,6 +47,11 @@ async def home(request: Request):
 
 @app.get("/auth", response_class=HTMLResponse)
 async def choose_role(request: Request):
+    user = request.session.get("user")
+
+    request.session["user"] = str(user["_id"])         # already exists
+    request.session["role"] = user["role"]             # "patient" or "doctor"
+
     return templates.TemplateResponse("select_role.html", {"request": request})
 
 @app.get("/patient/register", response_class=HTMLResponse)
@@ -177,21 +182,30 @@ async def post_doctor_login(
 
 @app.get("/doctor/dashboard", response_class=HTMLResponse)
 async def doctor_dashboard(request: Request):
-    doctor_id = request.session.get("user")
-    if not doctor_id or request.session.get("role") != "doctor":
-        return RedirectResponse("/doctor/login", status_code=status.HTTP_302_FOUND)
+    user_id = request.session.get("user")
+    role = request.session.get("role")
 
-    appointments = list(db["Appointments"].find({"doctor_id": ObjectId(doctor_id)}))
+    if not user_id or role != "doctor":
+        return RedirectResponse("/auth", status_code=302)
+
+    # Fetch all appointments for this doctor
+    appointments = list(db["Appointments"].find({"doctor_id": ObjectId(user_id)}))
+
+    patients = []
     for appt in appointments:
-        patient = db["Patients"].find_one({"_id": appt["patient_id"]})
+        patient = db["Users"].find_one({"_id": appt["patient_id"]})
         clinic = db["Clinics"].find_one({"_id": appt["clinic_id"]})
-        appt["patient_name"] = patient["full_name"] if patient else "Unknown"
-        appt["clinic_name"] = clinic["name"] if clinic else "Unknown"
-        appt["clinic_location"] = clinic["location"] if clinic else "Unknown"
+        patients.append({
+            "name": patient["name"],
+            "slot": appt["slot"],
+            "date": appt["date"],
+            "clinic": clinic["name"],
+            "clinic_address": clinic["address"]
+        })
 
-    return templates.TemplateResponse("doctor/dashboard.html", {
+    return templates.TemplateResponse("doctor_dashboard.html", {
         "request": request,
-        "appointments": appointments
+        "patients": patients
     })
 
 
@@ -286,26 +300,6 @@ async def about_us_page(request: Request):
     user_name = request.session.get("user_name")
     role = request.session.get("role")
     return templates.TemplateResponse("about_us.html", {
-        "request": request,
-        "user_name": user_name,
-        "role": role
-    })
-
-@app.get("/FAQs", response_class=HTMLResponse)
-async def faqs_page(request: Request):
-    user_name = request.session.get("user_name")
-    role = request.session.get("role")
-    return templates.TemplateResponse("faqs.html", {
-        "request": request,
-        "user_name": user_name,
-        "role": role
-    })
-
-@app.get("/LatestNews", response_class=HTMLResponse)
-async def latest_news_page(request: Request):
-    user_name = request.session.get("user_name")
-    role = request.session.get("role")
-    return templates.TemplateResponse("latest_news.html", {
         "request": request,
         "user_name": user_name,
         "role": role

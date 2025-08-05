@@ -1,15 +1,57 @@
-<h2>My Appointments</h2>
-<table class="table table-bordered">
-  <thead><tr><th>Patient</th><th>Clinic</th><th>Location</th><th>Time</th></tr></thead>
-  <tbody>
-    {% for appt in appointments %}
-      <tr>
-        <td>{{ appt.patient_name }}</td>
-        <td>{{ appt.clinic_name }}</td>
-        <td>{{ appt.clinic_location }}</td>
-        <td>{{ appt.slot }}</td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Doctor Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f4f4f4;
+            padding: 30px;
+        }
+
+        .card {
+            background: white;
+            max-width: 700px;
+            margin: auto;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        .patient {
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+
+        .patient:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Your Appointments</h2>
+        {% if patients %}
+            {% for patient in patients %}
+                <div class="patient">
+                    <p><strong>Patient:</strong> {{ patient.name }}</p>
+                    <p><strong>Date:</strong> {{ patient.date }}</p>
+                    <p><strong>Time:</strong> {{ patient.slot }}</p>
+                    <p><strong>Clinic:</strong> {{ patient.clinic }}</p>
+                    <p><strong>Address:</strong> {{ patient.clinic_address }}</p>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No appointments yet.</p>
+        {% endif %}
+    </div>
+</body>
+</html>
+
 

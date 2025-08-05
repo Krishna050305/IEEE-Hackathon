@@ -7,6 +7,11 @@
             font-family: 'Segoe UI', sans-serif;
             background-color: #f4f4f4;
             padding: 30px;
+            background-image: url('/static/images/bg.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
         }
 
         .card {
@@ -16,6 +21,7 @@
             padding: 30px;
             border-radius: 12px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            text-align: left;
         }
 
         h2 {
@@ -35,6 +41,25 @@
             margin-top: 20px;
             text-align: center;
         }
+
+        .btn-home {
+            display: block;
+            width: fit-content;
+            margin: 30px auto 0;
+            padding: 12px 24px;
+            background-color: #1EB8CD;
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-home:hover {
+            background-color: #159bac;
+        }
     </style>
 </head>
 <body>
@@ -50,6 +75,9 @@
         <p><strong>Time:</strong> {{ slot }}</p>
 
         <p class="highlight">Appointment Booked!</p>
+
+        <a href="/" class="btn-home">Go to Home</a>
     </div>
 </body>
 </html>
+
