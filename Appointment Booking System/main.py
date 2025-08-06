@@ -48,6 +48,7 @@ async def home(request: Request):
         "role": role
     })
 
+
 @app.get("/auth", response_class=HTMLResponse)
 async def choose_role(request: Request):
     user = request.session.get("user")
@@ -470,24 +471,62 @@ async def submit_booking(
     if not clinic_id:
         return HTMLResponse("Clinic not associated with this doctor", status_code=400)
 
-    new_appt = {
+    # ✅ Check for existing appointment
+    query = {
         "doctor_id": ObjectId(doctor_id),
-        "patient_id": ObjectId(patient_id),
         "date": date,
-        "slot": slot,
-        "clinic_id": clinic_id
+        "slot": slot
     }
 
-    db["Appointments"].insert_one(new_appt)
+    if edit_id:
+        # If editing, exclude the current appointment being edited
+        query["_id"] = {"$ne": ObjectId(edit_id)}
 
+    existing = db["Appointments"].find_one(query)
+
+    if existing:
+        return HTMLResponse(content="""
+            <div style="
+                max-width: 600px;
+                margin: 80px auto;
+                padding: 40px;
+                background-image: "../static/images/bg.jpg";
+                background-color: #fff0f0;
+                border: 2px solid #ff4d4f;
+                border-radius: 12px;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+                font-family: 'Segoe UI', sans-serif;
+                text-align: center;
+            ">
+                <h2 style="color: #c0392b; margin-bottom: 20px;">❌ Slot Already Booked</h2>
+                <p style="font-size: 16px; color: #444;">Please go back and choose a different time slot.</p>
+                <a href="javascript:history.back()" style="
+                    display: inline-block;
+                    margin-top: 20px;
+                    padding: 10px 20px;
+                    background-color: #1eb8cd;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 6px;
+                    font-weight: bold;
+                ">Go Back</a>
+            </div>
+        """, status_code=409)
+
+    # ✅ Insert new appointment
+    db["Appointments"].insert_one({
+        "doctor_id": ObjectId(doctor_id),
+        "clinic_id": clinic_id,
+        "patient_id": ObjectId(patient_id),
+        "slot": slot,
+        "date": date
+    })
+
+    # ✅ Delete old appointment if editing
     if edit_id:
         db["Appointments"].delete_one({"_id": ObjectId(edit_id)})
 
-    # ✅ Redirect with query params so dashboard shows update success message
-    return RedirectResponse(
-        url=f"/patient/dashboard?updated_date={date}&updated_slot={slot}",
-        status_code=302
-    )
+    return RedirectResponse(f"/patient/dashboard?updated_date={date}&updated_slot={slot}", status_code=302)
 
 
 @app.get("/confirmation", response_class=HTMLResponse)
