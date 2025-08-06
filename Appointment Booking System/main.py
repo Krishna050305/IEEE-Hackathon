@@ -501,7 +501,7 @@ async def submit_booking(
     if not clinic_id:
         return HTMLResponse("Clinic not associated with this doctor", status_code=400)
 
-    # ✅ Check for existing appointment
+    # Check for existing appointment
     query = {
         "doctor_id": ObjectId(doctor_id),
         "date": date,
@@ -555,7 +555,7 @@ async def submit_booking(
             </div>
         """, status_code=409)
 
-    # ✅ Insert new appointment
+    # Insert new appointment
     db["Appointments"].insert_one({
         "doctor_id": ObjectId(doctor_id),
         "clinic_id": clinic_id,
@@ -564,7 +564,7 @@ async def submit_booking(
         "date": date
     })
 
-    # ✅ Delete old appointment if editing
+    # Delete old appointment if editing
     if edit_id:
         db["Appointments"].delete_one({"_id": ObjectId(edit_id)})
 
@@ -617,17 +617,79 @@ async def update_appointment(
     date: str = Form(...),
     slot: str = Form(...)
 ):
+    # Fetch original appointment
+    appointment = db["Appointments"].find_one({"_id": ObjectId(appointment_id)})
+    if not appointment:
+        return HTMLResponse("Appointment not found", status_code=404)
+
+    doctor_id = appointment["doctor_id"]
+
+    # Prevent slot conflicts (exclude this appointment ID)
+    conflict = db["Appointments"].find_one({
+        "doctor_id": doctor_id,
+        "date": date,
+        "slot": slot,
+        "_id": {"$ne": ObjectId(appointment_id)}  # Exclude current one
+    })
+
+    if conflict:
+        # Styled "Slot Already Booked" error page with bg.png
+        return HTMLResponse(
+            content="""
+            <!DOCTYPE html>
+            <html>
+            <head><title>Slot Already Booked</title></head>
+            <body style='
+                margin: 0;
+                padding: 0;
+                background-image: url("/static/images/bg.png");
+                background-size: cover;
+                background-position: center;
+                height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-family: "Segoe UI", sans-serif;
+            '>
+            <div style='
+                max-width: 600px;
+                padding: 40px;
+                background-color: #fff0f0;
+                border: 2px solid #ff4d4f;
+                border-radius: 12px;
+                text-align: center;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            '>
+                <h2 style='color: #c0392b;'>❌ Slot Already Booked</h2>
+                <p>Please go back and choose a different time slot.</p>
+                <a href='javascript:history.back()' style='
+                    padding: 10px 20px;
+                    background-color: #1eb8cd;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 6px;
+                    font-weight: bold;
+                '>Go Back</a>
+            </div>
+            </body>
+            </html>
+            """,
+            status_code=409
+        )
+
+    # If no conflict, proceed with update
     db["Appointments"].update_one(
         {"_id": ObjectId(appointment_id)},
         {"$set": {"date": date, "slot": slot}}
     )
 
-    # Redirect based on role
     role = request.session.get("role")
 
     if role == "doctor":
         return RedirectResponse("/doctor/dashboard", status_code=302)
-    return RedirectResponse(f"/patient/dashboard?updated_date={date}&updated_slot={slot}", status_code=302)
+    return RedirectResponse("/patient/dashboard", status_code=302)
+
+
 
 @app.get("/appointment/delete/{appointment_id}")
 async def delete_appointment(request: Request, appointment_id: str):
@@ -641,17 +703,17 @@ async def delete_appointment(request: Request, appointment_id: str):
     if not appointment:
         return HTMLResponse("Appointment not found", status_code=404)
 
-    # 🛡 Ensure patient can only delete their own appointments
+    # Ensure patient can only delete their own appointments
     if role == "patient" and str(appointment["patient_id"]) != user_id:
         return HTMLResponse("Unauthorized", status_code=403)
 
-    # 🛡 Ensure doctor can only delete their own appointments
+    # Ensure doctor can only delete their own appointments
     if role == "doctor" and str(appointment["doctor_id"]) != user_id:
         return HTMLResponse("Unauthorized", status_code=403)
 
     db["Appointments"].delete_one({"_id": ObjectId(appointment_id)})
 
-    # ✅ Redirect to appropriate dashboard
+    # Redirect to appropriate dashboard
     if role == "doctor":
         return RedirectResponse("/doctor/dashboard", status_code=302)
     return RedirectResponse("/patient/dashboard", status_code=302)
