@@ -32,24 +32,56 @@
         .patient:last-child {
             border-bottom: none;
         }
+        .patient h3 {
+            margin: 0;
+            color: #34495e;
+        }
+        .patient p {
+            margin: 5px 0;
+            color: #7f8c8d;
+        }
+        .btn-home {
+            display: block;
+            width: fit-content;
+            margin: 30px auto 0;
+            padding: 12px 24px;
+            background-color: #1EB8CD;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .btn-home:hover {
+            background-color: #17a2b8;
+            transition: background-color 0.3s ease;
+        }
+        .btn-home:active {
+            background-color: #138496;
+        }
+
     </style>
 </head>
 <body>
     <div class="card">
-        <h2>Your Appointments</h2>
-        {% if patients %}
-            {% for patient in patients %}
-                <div class="patient">
-                    <p><strong>Patient:</strong> {{ patient.name }}</p>
-                    <p><strong>Date:</strong> {{ patient.date }}</p>
-                    <p><strong>Time:</strong> {{ patient.slot }}</p>
-                    <p><strong>Clinic:</strong> {{ patient.clinic }}</p>
-                    <p><strong>Address:</strong> {{ patient.clinic_address }}</p>
-                </div>
-            {% endfor %}
+        <h2>Appointments for Dr. {{ doctor.full_name }}</h2>
+
+        {% if appointments %}
+        {% for patient in patients %}
+            <div class="patient-card">
+                <h3>{{ patient.name }}</h3>
+                <p>Email: {{ patient.email }}</p>
+                <p>Appointment Date: {{ patient.date }}</p>
+                <p>Time Slot: {{ patient.slot }}</p>
+            </div>
+        {% endfor %}
         {% else %}
-            <p>No appointments yet.</p>
+            <p>No appointments scheduled.</p>
         {% endif %}
+        
+        {% comment %} A button to return to the home page: {% endcomment %}
+        <a href="/" class="btn-home">Back to Home</a>
+
+
     </div>
 </body>
 </html>

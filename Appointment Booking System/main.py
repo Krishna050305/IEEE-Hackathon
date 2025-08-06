@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from passlib.hash import bcrypt
+from passlib.context import CryptContext
 from pymongo import MongoClient
 from bson import ObjectId
 from datetime import datetime
@@ -198,36 +199,33 @@ async def post_doctor_login(
 
     return RedirectResponse("/", status_code=302)
 
-
-
 @app.get("/doctor/dashboard", response_class=HTMLResponse)
 async def doctor_dashboard(request: Request):
-    user_id = request.session.get("user")
-    role = request.session.get("role")
-
-    if not user_id or role != "doctor":
+    doctor_id = request.session.get("user")
+    if not doctor_id:
         return RedirectResponse("/auth", status_code=302)
 
-    doctor_id = ObjectId(user_id)
+    # Get all appointments for this doctor
+    appointments = db["Appointments"].find({"doctor_id": ObjectId(doctor_id)})
 
-    appointments = list(db["Appointments"].find({"doctor_id": doctor_id}))
-
-    patients = []
+    patient_data = []
     for appt in appointments:
-        patient = db["Patients"].find_one({"_id": appt["patient_id"]})  # 🔧 FIXED
-        clinic = db["Clinics"].find_one({"_id": appt["clinic_id"]})
-        patients.append({
-            "name": patient.get("full_name", "Unknown"),
+        patient = db["Patients"].find_one({"_id": appt["patient_id"]})
+        if not patient:
+            continue
+        patient_data.append({
+            "name": patient["full_name"],
             "email": patient.get("email", "N/A"),
             "slot": appt["slot"],
-            "date": appt["date"],   
-            "clinic": clinic["name"],
-            "address": clinic["address"]
+            "date": appt["date"]
         })
+
+    doctor = db["Doctors"].find_one({"_id": ObjectId(doctor_id)})
 
     return templates.TemplateResponse("doctor/dashboard.html", {
         "request": request,
-        "patients": patients
+        "doctor": doctor,
+        "patients": patient_data
     })
 
 
