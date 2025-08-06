@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Request, Form, status, Query
+from fastapi import FastAPI, Request, Form, status, Query, Depends, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from passlib.hash import bcrypt
+from passlib.context import CryptContext
 from pymongo import MongoClient
 from bson import ObjectId
 from datetime import datetime
@@ -45,13 +46,37 @@ async def home(request: Request):
         "role": role
     })
 
+
 @app.get("/auth", response_class=HTMLResponse)
 async def choose_role(request: Request):
+    user = request.session.get("user")
+
+    request.session["user"] = str(user["_id"])         # already exists
+    request.session["role"] = user["role"]             # "patient" or "doctor"
+
     return templates.TemplateResponse("select_role.html", {"request": request})
+
+@app.post("/auth", response_class=HTMLResponse)
+async def login_user(request: Request, email: str = Form(...), password: str = Form(...)):
+    user = db["Users"].find_one({"email": email})
+
+    if not user or user["password"] != password:
+        return HTMLResponse("Invalid credentials", status_code=401)
+
+    request.session["user"] = str(user["_id"])       # store user ID
+    request.session["role"] = user["role"]           # store "doctor" or "patient"
+
+    # redirect based on role
+    if user["role"] == "doctor":
+        return RedirectResponse("/doctor/dashboard", status_code=302)
+    else:
+        return RedirectResponse("/patient/dashboard", status_code=302)
 
 @app.get("/patient/register", response_class=HTMLResponse)
 async def get_patient_register(request: Request):
     return templates.TemplateResponse("patient/register.html", {"request": request})
+
+
 
 @app.post("/patient/register", response_class=HTMLResponse)
 async def post_patient_register(
@@ -102,54 +127,87 @@ async def post_patient_login(
 @app.get("/patient/dashboard", response_class=HTMLResponse)
 async def patient_dashboard(
     request: Request,
-    doctor_id: str = Query(None),
-    slot: str = Query(None),
-    date: str = Query(None)
+    updated_date: str = Query(None),
+    updated_slot: str = Query(None)
 ):
     patient_id = request.session.get("user")
     if not patient_id:
         return RedirectResponse("/auth", status_code=status.HTTP_302_FOUND)
 
-    doctor = db["Doctors"].find_one({"_id": ObjectId(doctor_id)}) if doctor_id else None
-    clinic = db["Clinics"].find_one({"_id": doctor["clinic_id"]}) if doctor else None
     patient = db["Patients"].find_one({"_id": ObjectId(patient_id)})
+
+    appointments = list(db["Appointments"].find({"patient_id": ObjectId(patient_id)}))
+    for appt in appointments:
+        doctor = db["Doctors"].find_one({"_id": appt["doctor_id"]})
+        clinic = db["Clinics"].find_one({"_id": appt["clinic_id"]})
+
+        appt["doctor_name"] = doctor.get("full_name", "Unknown") if doctor else "Unknown"
+        appt["specialization"] = doctor.get("specialization", "N/A") if doctor else "N/A"
+        appt["clinic_name"] = clinic["name"] if clinic else "Unknown"
+        appt["clinic_address"] = clinic["address"] if clinic else "Unknown"
 
     return templates.TemplateResponse("patient/dashboard.html", {
         "request": request,
-        "doctor": doctor,
-        "clinic": clinic,
-        "slot": slot,
-        "date": date,
-        "patient": patient
+        "patient": patient,
+        "appointments": appointments,
+        "updated_date": updated_date,
+        "updated_slot": updated_slot
     })
+
+
 
 # Logout
 @app.get("/doctor/register", response_class=HTMLResponse)
 async def get_doctor_register(request: Request):
-    return templates.TemplateResponse("doctor/register.html", {"request": request})
+    clinics = list(db["Clinics"].find({}))
+    return templates.TemplateResponse("doctor/register.html", {
+        "request": request,
+        "clinics": clinics
+    })
+
 
 
 @app.post("/doctor/register", response_class=HTMLResponse)
 async def post_doctor_register(
-        request: Request,
-        full_name: str = Form(...),
-        email: str = Form(...),
-        specialization: str = Form(...),
-        clinic: str = Form(...),
-        password: str = Form(...)
+    request: Request,
+    full_name: str = Form(...),
+    email: str = Form(...),
+    specialization: str = Form(...),
+    clinic: str = Form(...),  # clinic is _id in string format
+    password: str = Form(...)
 ):
-    if doctor_collection.find_one({"email": email}):
-        return templates.TemplateResponse("doctor/register.html",
-                                          {"request": request, "error": "Email already registered"})
+    clinic_obj_id = ObjectId(clinic)
 
-    doctor_collection.insert_one({
+    # Check if doctor already exists based on name + specialization + clinic
+    existing_doctor = doctor_collection.find_one({
         "full_name": full_name,
-        "email": email,
         "specialization": specialization,
-        "clinic": clinic,
-        "password": bcrypt.hash(password)
+        "clinic_id": clinic_obj_id
     })
+
+    if existing_doctor:
+        # Update email and password
+        doctor_collection.update_one(
+            {"_id": existing_doctor["_id"]},
+            {
+                "$set": {
+                    "email": email,
+                    "password": bcrypt.hash(password)
+                }
+            }
+        )
+    else:
+        # Insert new doctor
+        doctor_collection.insert_one({
+            "full_name": full_name,
+            "email": email,
+            "specialization": specialization,
+            "clinic_id": clinic_obj_id,
+            "password": bcrypt.hash(password)
+        })
+
     return RedirectResponse("/doctor/login", status_code=status.HTTP_302_FOUND)
+
 
 
 @app.get("/doctor/login", response_class=HTMLResponse)
@@ -159,9 +217,9 @@ async def get_doctor_login(request: Request):
 
 @app.post("/doctor/login", response_class=HTMLResponse)
 async def post_doctor_login(
-        request: Request,
-        email: str = Form(...),
-        password: str = Form(...)
+    request: Request,
+    email: str = Form(...),
+    password: str = Form(...)
 ):
     doctor = doctor_collection.find_one({"email": email})
     if not doctor or not bcrypt.verify(password, doctor["password"]):
@@ -174,31 +232,46 @@ async def post_doctor_login(
     return RedirectResponse("/", status_code=302)
 
 
-
 @app.get("/doctor/dashboard", response_class=HTMLResponse)
 async def doctor_dashboard(request: Request):
     doctor_id = request.session.get("user")
-    if not doctor_id or request.session.get("role") != "doctor":
-        return RedirectResponse("/doctor/login", status_code=status.HTTP_302_FOUND)
+    if not doctor_id:
+        return RedirectResponse("/doctor/login", status_code=302)
 
-    appointments = list(db["Appointments"].find({"doctor_id": ObjectId(doctor_id)}))
+    try:
+        doctor_obj_id = ObjectId(doctor_id)
+    except:
+        return HTMLResponse("Invalid doctor ID", status_code=400)
+
+    appointments = list(db["Appointments"].find({"doctor_id": doctor_obj_id}))
+
+    patient_data = []
     for appt in appointments:
         patient = db["Patients"].find_one({"_id": appt["patient_id"]})
-        clinic = db["Clinics"].find_one({"_id": appt["clinic_id"]})
-        appt["patient_name"] = patient["full_name"] if patient else "Unknown"
-        appt["clinic_name"] = clinic["name"] if clinic else "Unknown"
-        appt["clinic_location"] = clinic["location"] if clinic else "Unknown"
+        if not patient:
+            continue
+        patient_data.append({
+            "name": patient.get("full_name", "Unknown"),
+            "email": patient.get("email", "Unknown"),
+            "date": appt["date"],
+            "slot": appt["slot"],
+            "age": patient.get("age", "N/A"),
+            "phone": patient.get("phone_number", "N/A"),
+            "appointment_id": str(appt["_id"])
+        })
+
+    doctor = db["Doctors"].find_one({"_id": doctor_obj_id})
 
     return templates.TemplateResponse("doctor/dashboard.html", {
         "request": request,
-        "appointments": appointments
+        "doctor": doctor,
+        "patients": patient_data
     })
-
-
+    
 @app.get("/logout")
 async def logout(request: Request):
     request.session.clear()
-    return RedirectResponse("/", status_code=status.HTTP_302_FOUND)
+    return RedirectResponse("/", status_code=302)
 
 
 @app.get("/Cardiology", response_class=HTMLResponse)
@@ -210,17 +283,7 @@ async def cardiology_page(request: Request):
         "user_name": user_name,
         "role": role
     })
-
-@app.get("/Gynecology", response_class=HTMLResponse)
-async def gynecology_page(request: Request):
-    user_name = request.session.get("user_name")
-    role = request.session.get("role")
-    return templates.TemplateResponse("gyneaco.html", {
-        "request": request,
-        "user_name": user_name,
-        "role": role
-    })
-
+    
 @app.get("/Dentist", response_class=HTMLResponse)
 async def dentist_page(request: Request):
     user_name = request.session.get("user_name")
@@ -230,9 +293,19 @@ async def dentist_page(request: Request):
         "user_name": user_name,
         "role": role
     })
-
+    
+@app.get("/Gynecology", response_class=HTMLResponse)
+async def gynecologist_page(request: Request):
+    user_name = request.session.get("user_name")
+    role = request.session.get("role")
+    return templates.TemplateResponse("gyneaco.html", {
+        "request": request,
+        "user_name": user_name,
+        "role": role
+    })
+    
 @app.get("/Neurology", response_class=HTMLResponse)
-async def neurology_page(request: Request):
+async def gynecologist_page(request: Request):
     user_name = request.session.get("user_name")
     role = request.session.get("role")
     return templates.TemplateResponse("neurology.html", {
@@ -240,19 +313,9 @@ async def neurology_page(request: Request):
         "user_name": user_name,
         "role": role
     })
-
-@app.get("/Orthopedic", response_class=HTMLResponse)
-async def orthopedic_page(request: Request):
-    user_name = request.session.get("user_name")
-    role = request.session.get("role")
-    return templates.TemplateResponse("ortho.html", {
-        "request": request,
-        "user_name": user_name,
-        "role": role
-    })
-
+    
 @app.get("/Pediatrician", response_class=HTMLResponse)
-async def pediatrician_page(request: Request):
+async def pediatric_page(request: Request):
     user_name = request.session.get("user_name")
     role = request.session.get("role")
     return templates.TemplateResponse("pediatrics.html", {
@@ -260,12 +323,22 @@ async def pediatrician_page(request: Request):
         "user_name": user_name,
         "role": role
     })
-
+    
 @app.get("/Psychiatrist", response_class=HTMLResponse)
-async def psychiatrist_page(request: Request):
+async def pediatric_page(request: Request):
     user_name = request.session.get("user_name")
     role = request.session.get("role")
     return templates.TemplateResponse("psychiatry.html", {
+        "request": request,
+        "user_name": user_name,
+        "role": role
+    })
+    
+@app.get("/Orthopedic", response_class=HTMLResponse)
+async def ortho_page(request: Request):
+    user_name = request.session.get("user_name")
+    role = request.session.get("role")
+    return templates.TemplateResponse("ortho.html", {
         "request": request,
         "user_name": user_name,
         "role": role
@@ -286,26 +359,6 @@ async def about_us_page(request: Request):
     user_name = request.session.get("user_name")
     role = request.session.get("role")
     return templates.TemplateResponse("about_us.html", {
-        "request": request,
-        "user_name": user_name,
-        "role": role
-    })
-
-@app.get("/FAQs", response_class=HTMLResponse)
-async def faqs_page(request: Request):
-    user_name = request.session.get("user_name")
-    role = request.session.get("role")
-    return templates.TemplateResponse("faqs.html", {
-        "request": request,
-        "user_name": user_name,
-        "role": role
-    })
-
-@app.get("/LatestNews", response_class=HTMLResponse)
-async def latest_news_page(request: Request):
-    user_name = request.session.get("user_name")
-    role = request.session.get("role")
-    return templates.TemplateResponse("latest_news.html", {
         "request": request,
         "user_name": user_name,
         "role": role
@@ -335,7 +388,12 @@ async def show_specialty_page(request: Request, specialization: str, clinic_id: 
     doctors = list(db["Doctors"].find(query))
 
     for doc in doctors:
-        clinic = db["Clinics"].find_one({"_id": doc["clinic_id"]})
+        clinic_id = doc.get("clinic_id")
+        if not clinic_id:
+            continue  
+
+        clinic = db["Clinics"].find_one({"_id": clinic_id})
+
         doc["clinic_name"] = clinic["name"] if clinic else "Unknown"
         doc["clinic_address"] = clinic["address"] if clinic else "N/A"
 
@@ -346,43 +404,54 @@ async def show_specialty_page(request: Request, specialization: str, clinic_id: 
     })
 
 @app.get("/clinics/{specialization}", response_class=HTMLResponse)
-async def show_clinics_by_specialty(request: Request, specialization: str):
-    doctors = list(db["Doctors"].find({"specialization": specialization.capitalize()}))
+async def show_specialty_page(request: Request, specialization: str, clinic_id: str = Query(None)):
+    query = {"specialization": specialization.capitalize()}
 
-    # Collect all unique clinic IDs
-    clinic_ids = set()
-    for doctor in doctors:
-        cid = doctor.get("clinic_id")
-        if cid:
-            try:
-                # Convert to ObjectId if it's a string
-                if isinstance(cid, str):
-                    cid = ObjectId(cid)
-                clinic_ids.add(cid)
-            except:
-                continue
+    if clinic_id:
+        try:
+            query["clinic_id"] = ObjectId(clinic_id)
+        except:
+            pass
 
-    clinics = []
-    for cid in clinic_ids:
-        clinic = db["Clinics"].find_one({"_id": cid})
-        if clinic:
-            clinics.append({
-                "name": clinic.get("name", "Unknown"),
-                "location": clinic.get("location", "N/A"),
-                "address": clinic.get("address", "N/A")
-            })
+    doctors = db["Doctors"].find(query)
 
-    print("Fetched Clinics:", clinics)  # ✅ Debug log
+    doctor_list = []
+    for doc in doctors:
+        clinic_id = doc.get("clinic_id")
+        if not clinic_id:
+            continue 
 
-    return templates.TemplateResponse("specialty/clinics_by_specialty.html", {
+        clinic = db["Clinics"].find_one({"_id": clinic_id})
+        if not clinic:
+            continue 
+
+        doctor_list.append({
+            "full_name": doc.get("full_name"),
+            "specialization": doc.get("specialization"),
+            "opening_hours": doc.get("opening_hours"),
+            "closing_hours": doc.get("closing_hours"),
+            "phone_number": doc.get("phone_number"),
+            "_id": str(doc["_id"]),
+            "clinic_name": clinic["name"],
+            "clinic_address": clinic["address"]
+        })
+
+    return templates.TemplateResponse("specialty/choose_doctor.html", {
         "request": request,
         "specialization": specialization.capitalize(),
-        "clinics": clinics
+        "doctors": doctor_list
     })
-
+    
+    
 # Booking page for specific doctor
 @app.get("/book/{doctor_id}", response_class=HTMLResponse)
-async def show_booking_page(request: Request, doctor_id: str):
+async def show_booking_page(
+    request: Request,
+    doctor_id: str,
+    edit_id: str = Query(None),
+    date: str = Query(None),
+    slot: str = Query(None)
+):
     patient_id = request.session.get("user")
     if not patient_id:
         return RedirectResponse("/auth", status_code=status.HTTP_302_FOUND)
@@ -405,48 +474,89 @@ async def show_booking_page(request: Request, doctor_id: str):
         "clinic": clinic,
         "available_slots": all_slots,
         "today": today,
-        "booked_slots": booked_slots
+        "booked_slots": booked_slots,
+        "edit": bool(edit_id),  # pass True if editing
+        "edit_id": edit_id,
+        "existing_date": date,
+        "existing_slot": slot
     })
 
-
-# Confirm booking
 @app.post("/book/{doctor_id}", response_class=HTMLResponse)
-async def confirm_booking(
+async def submit_booking(
     request: Request,
     doctor_id: str,
+    date: str = Form(...),
     slot: str = Form(...),
-    date: str = Form(...)
+    edit_id: str = Form(None)
 ):
     patient_id = request.session.get("user")
     if not patient_id:
         return RedirectResponse("/auth", status_code=status.HTTP_302_FOUND)
 
-    # Prevent double-booking
-    existing = db["Appointments"].find_one({
+    doctor = db["Doctors"].find_one({"_id": ObjectId(doctor_id)})
+    if not doctor:
+        return HTMLResponse("Doctor not found", status_code=404)
+
+    clinic_id = doctor.get("clinic_id")
+    if not clinic_id:
+        return HTMLResponse("Clinic not associated with this doctor", status_code=400)
+
+    # ✅ Check for existing appointment
+    query = {
         "doctor_id": ObjectId(doctor_id),
-        "slot": slot,
-        "date": date
-    })
+        "date": date,
+        "slot": slot
+    }
+
+    if edit_id:
+        # If editing, exclude the current appointment being edited
+        query["_id"] = {"$ne": ObjectId(edit_id)}
+
+    existing = db["Appointments"].find_one(query)
 
     if existing:
-        return HTMLResponse("Slot already booked. Please go back and pick another.", status_code=400)
+        return HTMLResponse(content="""
+            <div style="
+                max-width: 600px;
+                margin: 80px auto;
+                padding: 40px;
+                background-image: "../static/images/bg.jpg";
+                background-color: #fff0f0;
+                border: 2px solid #ff4d4f;
+                border-radius: 12px;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+                font-family: 'Segoe UI', sans-serif;
+                text-align: center;
+            ">
+                <h2 style="color: #c0392b; margin-bottom: 20px;">❌ Slot Already Booked</h2>
+                <p style="font-size: 16px; color: #444;">Please go back and choose a different time slot.</p>
+                <a href="javascript:history.back()" style="
+                    display: inline-block;
+                    margin-top: 20px;
+                    padding: 10px 20px;
+                    background-color: #1eb8cd;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 6px;
+                    font-weight: bold;
+                ">Go Back</a>
+            </div>
+        """, status_code=409)
 
-    doctor = db["Doctors"].find_one({"_id": ObjectId(doctor_id)})
+    # ✅ Insert new appointment
     db["Appointments"].insert_one({
         "doctor_id": ObjectId(doctor_id),
-        "clinic_id": doctor["clinic_id"],
+        "clinic_id": clinic_id,
         "patient_id": ObjectId(patient_id),
         "slot": slot,
         "date": date
     })
 
-    return RedirectResponse(
-        f"/patient/dashboard?doctor_id={doctor_id}&slot={slot}&date={date}",
-        status_code=status.HTTP_302_FOUND
-    )
+    # ✅ Delete old appointment if editing
+    if edit_id:
+        db["Appointments"].delete_one({"_id": ObjectId(edit_id)})
 
-
-    return RedirectResponse("/confirmation", status_code=status.HTTP_302_FOUND)
+    return RedirectResponse(f"/patient/dashboard?updated_date={date}&updated_slot={slot}", status_code=302)
 
 
 @app.get("/confirmation", response_class=HTMLResponse)
@@ -461,6 +571,81 @@ async def appointment_confirmation(request: Request, slot: str, date: str, docto
         "slot": slot,
         "date": date
     })
+
+@app.get("/appointment/edit/{appointment_id}", response_class=HTMLResponse)
+async def edit_appointment(request: Request, appointment_id: str):
+    appointment = db["Appointments"].find_one({"_id": ObjectId(appointment_id)})
+    if not appointment:
+        return HTMLResponse("Appointment not found", status_code=404)
+
+    doctor = db["Doctors"].find_one({"_id": appointment["doctor_id"]})
+    patient = db["Patients"].find_one({"_id": appointment["patient_id"]})
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    return templates.TemplateResponse("appointment.html", {
+        "request": request,
+        "doctor": doctor,
+        "patient": patient,
+        "date": appointment["date"],
+        "slot": appointment["slot"],
+        "available_slots": [
+            "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+            "12:00 PM", "12:30 PM", "2:00 PM", "2:30 PM"
+        ],
+        "today": today,
+        "edit": True,
+        "appointment_id": appointment_id
+    })
+
+
+@app.post("/appointment/edit/{appointment_id}")
+async def update_appointment(
+    request: Request,
+    appointment_id: str,
+    date: str = Form(...),
+    slot: str = Form(...)
+):
+    db["Appointments"].update_one(
+        {"_id": ObjectId(appointment_id)},
+        {"$set": {"date": date, "slot": slot}}
+    )
+
+    # Redirect based on role
+    role = request.session.get("role")
+
+    if role == "doctor":
+        return RedirectResponse("/doctor/dashboard", status_code=302)
+    return RedirectResponse(f"/patient/dashboard?updated_date={date}&updated_slot={slot}", status_code=302)
+
+@app.get("/appointment/delete/{appointment_id}")
+async def delete_appointment(request: Request, appointment_id: str):
+    role = request.session.get("role")
+    user_id = request.session.get("user")
+
+    if not user_id or not role:
+        return RedirectResponse("/auth", status_code=302)
+
+    appointment = db["Appointments"].find_one({"_id": ObjectId(appointment_id)})
+    if not appointment:
+        return HTMLResponse("Appointment not found", status_code=404)
+
+    # 🛡 Ensure patient can only delete their own appointments
+    if role == "patient" and str(appointment["patient_id"]) != user_id:
+        return HTMLResponse("Unauthorized", status_code=403)
+
+    # 🛡 Ensure doctor can only delete their own appointments
+    if role == "doctor" and str(appointment["doctor_id"]) != user_id:
+        return HTMLResponse("Unauthorized", status_code=403)
+
+    db["Appointments"].delete_one({"_id": ObjectId(appointment_id)})
+
+    # ✅ Redirect to appropriate dashboard
+    if role == "doctor":
+        return RedirectResponse("/doctor/dashboard", status_code=302)
+    return RedirectResponse("/patient/dashboard", status_code=302)
+
+
+
 
 
 

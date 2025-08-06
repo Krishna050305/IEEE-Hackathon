@@ -6,6 +6,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Live Life to the Fullest with a Healthy Heart</title>
         <link rel="stylesheet" href="static/css/cardio.css">
+        <link rel="stylesheet" href="static/css/styles.css">
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
             rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
@@ -26,7 +27,7 @@
                         <ul class="dropdown-menu">
                             <li><a href="/AboutUs">About Us</a></li>
                             <li><a href="/OurTeam">Our Team</a></li>
-                            <li><a href="/FAQs">FAQs</a></li>
+                            <li><a href="/Blog">Blog & FAQs</a></li>
                         </ul>
                     </li>
                     <li class="has-dropdown">
@@ -42,14 +43,6 @@
                         </ul>
                     </li>
 
-                    <li class="has-dropdown">
-                        <a href="#">News <i class="fas fa-chevron-down nav-arrow"></i></a>
-                        <ul class="dropdown-menu">
-                            <li><a href="/LatestNews">Latest News</a></li>
-                            <li><a href="/Blog">Blog</a></li>
-                        </ul>
-                    </li>
-                    <li><a href="#">Contacts</a></li>
                 </ul>
                 <div class="nav-utility-icons">
                     <div class="call-info">
@@ -57,20 +50,23 @@
                         <span class="phone-number">2381-50060070</span>
                     </div>
                     {% if user_name %}
-                      <div class="dropdown user-dropdown">
-                          <a href="#" class="btn btn-primary dropdown-toggle">
-                            Hello, {{ user_name }}
-                          </a>
-                          <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/dashboard">Dashboard</a></li>
-                            <li><a class="dropdown-item" href="/logout">Logout</a></li>
-                          </ul>
-                        </div>
-
-                    {% else %}
-                      <a href="/patient/login" class="btn btn-primary btn-login">Patient Login</a>
-                      <a href="/doctor/login" class="btn btn-primary btn-signup">Doctor Login</a>
+                <div class="dropdown user-dropdown">
+                    <a href="#" class="btn btn-primary dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    Hello, {{ user_name }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                    {% if role == "doctor" %}
+                        <li><a class="dropdown-item" href="/doctor/dashboard">Dashboard</a></li>
+                    {% elif role == "patient" %}
+                        <li><a class="dropdown-item" href="/patient/dashboard">Dashboard</a></li>
                     {% endif %}
+                    <li><a class="dropdown-item" href="/logout">Logout</a></li>
+                    </ul>
+                </div>
+                {% else %}
+                <a href="/patient/login" class="btn btn-primary btn-login">Patient Login</a>
+                <a href="/doctor/login" class="btn btn-primary btn-signup">Doctor Login</a>
+                {% endif %}
 
 
                 </div>

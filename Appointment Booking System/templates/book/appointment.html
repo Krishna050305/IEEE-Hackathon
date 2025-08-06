@@ -9,6 +9,7 @@
         background-color: #f4f4f4;
         margin: 0;
         padding: 30px;
+        background-image: url('../static/images/bg.jpg');
     }
 
     h2 {
@@ -95,15 +96,20 @@
 <body>
     <h2>Book Appointment with {{ doctor.full_name }}</h2>
 
-    <form method="post">
+    <form method="post" action="/book/{{ doctor._id }}">
+        {% if edit %}
+            <input type="hidden" name="edit_id" value="{{ edit_id }}">
+        {% endif %}
+
         <label for="date">Choose Date:</label>
-        <input type="date" id="date" name="date" min="{{ today }}" required>
+        <input type="date" id="date" name="date" min="{{ today }}" value="{{ existing_date or '' }}" required>
 
         <label>Choose Time Slot:</label>
         <div class="slots">
             {% for slot in available_slots %}
                 <div class="slot-option">
-                    <input type="radio" id="slot{{ loop.index }}" name="slot" value="{{ slot }}" required>
+                    <input type="radio" id="slot{{ loop.index }}" name="slot" value="{{ slot }}" required
+                        {% if slot == existing_slot %}checked{% endif %}>
                     <label for="slot{{ loop.index }}">{{ slot }}</label>
                 </div>
             {% endfor %}
@@ -111,6 +117,7 @@
 
         <button type="submit">Confirm Appointment</button>
     </form>
+
 
     <script src="static/js/scriptCardio.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

@@ -21,10 +21,14 @@ class Doctor(db.Model):
     doctor_phone = db.Column(db.Integer, primary_key = True)
     opening_hours = db.Column(Time)
     closing_hours = db.Column(Time)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(200))
 
 class Clients(db.Model):
     clinic = db.Column(db.String(100))
     address = db.Column(db.String(500))
+    
+
 
 
 
