@@ -82,28 +82,7 @@
 
         .appointment-actions {
             margin-top: 10px;
-        }
-
-        .edit-btn,
-        .delete-btn {
-            display: inline-block;
-            margin-right: 10px;
-            padding: 8px 14px;
-            border-radius: 5px;
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .edit-btn {
-            background-color: #1EB8CD;
-            color: #fff;
-        }
-
-        .delete-btn {
-            background-color: #1EB8CD;
-            color: #fff;
-        }
-
+        }        
     </style>
 </head>
 <body>
@@ -120,7 +99,8 @@
             <p><strong>Time:</strong> {{ appt.slot }}</p>
 
             <div style="margin-top: 15px;">
-                <a href="/book/{{ doctor._id }}?edit_id={{ appointment._id }}&date={{ appointment.date }}&slot={{ appointment.slot }}" class="btn-edit">
+                <a href="/book/{{ appt.doctor_id }}?edit_id={{ appt._id }}&date={{ appt.date }}&slot={{ appt.slot }}" class="btn-edit"
+                style >
                     Update
                 </a>
 

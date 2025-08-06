@@ -444,9 +444,6 @@ async def show_booking_page(
         "existing_slot": slot
     })
 
-
-
-# Confirm booking
 @app.post("/book/{doctor_id}", response_class=HTMLResponse)
 async def submit_booking(
     request: Request,
@@ -455,21 +452,38 @@ async def submit_booking(
     slot: str = Form(...),
     edit_id: str = Form(None)
 ):
+    # Get patient session ID
     patient_id = request.session.get("user")
+    if not patient_id:
+        return RedirectResponse("/auth", status_code=status.HTTP_302_FOUND)
 
+    # Fetch doctor and clinic info
+    doctor = db["Doctors"].find_one({"_id": ObjectId(doctor_id)})
+    if not doctor:
+        return HTMLResponse("Doctor not found", status_code=404)
+
+    clinic_id = doctor.get("clinic_id")
+    if not clinic_id:
+        return HTMLResponse("Clinic not associated with this doctor", status_code=400)
+
+    # Create new appointment dict
     new_appt = {
         "doctor_id": ObjectId(doctor_id),
         "patient_id": ObjectId(patient_id),
         "date": date,
-        "slot": slot
+        "slot": slot,
+        "clinic_id": clinic_id
     }
 
+    # Save new appointment
     db["Appointments"].insert_one(new_appt)
 
+    # Remove old appointment if this is an edit
     if edit_id:
         db["Appointments"].delete_one({"_id": ObjectId(edit_id)})
 
     return RedirectResponse("/patient/dashboard", status_code=status.HTTP_302_FOUND)
+
 
 
 @app.get("/confirmation", response_class=HTMLResponse)

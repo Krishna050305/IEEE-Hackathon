@@ -68,7 +68,7 @@
         {% if appointments %}
         {% for patient in patients %}
             <div class="patient-card">
-                <h3>{{ patient.name }}</h3>
+                <h3>{{ patient.full_name }}</h3>
                 <p>Email: {{ patient.email }}</p>
                 <p>Appointment Date: {{ patient.date }}</p>
                 <p>Time Slot: {{ patient.slot }}</p>
