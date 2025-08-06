@@ -88,14 +88,16 @@
 </head>
 <body>
     <div class="card">
-        <h2>Appointments for {{ doctor.full_name }}</h2>
+        <h2>Upcoming Appointments for {{ doctor.full_name }}</h2>
 
         {% for patient in patients %}
         <div class="patient-card">
-            <h3>{{ patient.name }}</h3>
+            <p><strong>Name:</strong> {{ patient.name }}</p>
             <p><strong>Email:</strong> {{ patient.email }}</p>
-            <p><strong>Appointment Date:</strong> {{ patient.date }}</p>
-            <p><strong>Time Slot:</strong> {{ patient.slot }}</p>
+            <p><strong>Phone:</strong> {{ patient.phone }}</p>
+            <p><strong>Age:</strong> {{ patient.age }}</p>
+            <p><strong>Date:</strong> {{ patient.date }}</p>
+            <p><strong>Slot:</strong> {{ patient.slot }}</p>
 
             <div class="appointment-actions">
                 <a href="/appointment/edit/{{ patient.appointment_id }}" class="btn-edit">Edit</a>

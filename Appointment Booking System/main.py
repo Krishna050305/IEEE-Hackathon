@@ -159,30 +159,55 @@ async def patient_dashboard(
 # Logout
 @app.get("/doctor/register", response_class=HTMLResponse)
 async def get_doctor_register(request: Request):
-    return templates.TemplateResponse("doctor/register.html", {"request": request})
+    clinics = list(db["Clinics"].find({}))
+    return templates.TemplateResponse("doctor/register.html", {
+        "request": request,
+        "clinics": clinics
+    })
+
 
 
 @app.post("/doctor/register", response_class=HTMLResponse)
 async def post_doctor_register(
-        request: Request,
-        full_name: str = Form(...),
-        email: str = Form(...),
-        specialization: str = Form(...),
-        clinic: str = Form(...),
-        password: str = Form(...)
+    request: Request,
+    full_name: str = Form(...),
+    email: str = Form(...),
+    specialization: str = Form(...),
+    clinic: str = Form(...),  # clinic is _id in string format
+    password: str = Form(...)
 ):
-    if doctor_collection.find_one({"email": email}):
-        return templates.TemplateResponse("doctor/register.html",
-                                          {"request": request, "error": "Email already registered"})
+    clinic_obj_id = ObjectId(clinic)
 
-    doctor_collection.insert_one({
+    # Check if doctor already exists based on name + specialization + clinic
+    existing_doctor = doctor_collection.find_one({
         "full_name": full_name,
-        "email": email,
         "specialization": specialization,
-        "clinic": clinic,
-        "password": bcrypt.hash(password)
+        "clinic_id": clinic_obj_id
     })
+
+    if existing_doctor:
+        # Update email and password
+        doctor_collection.update_one(
+            {"_id": existing_doctor["_id"]},
+            {
+                "$set": {
+                    "email": email,
+                    "password": bcrypt.hash(password)
+                }
+            }
+        )
+    else:
+        # Insert new doctor
+        doctor_collection.insert_one({
+            "full_name": full_name,
+            "email": email,
+            "specialization": specialization,
+            "clinic_id": clinic_obj_id,
+            "password": bcrypt.hash(password)
+        })
+
     return RedirectResponse("/doctor/login", status_code=status.HTTP_302_FOUND)
+
 
 
 @app.get("/doctor/login", response_class=HTMLResponse)
@@ -230,6 +255,8 @@ async def doctor_dashboard(request: Request):
             "email": patient.get("email", "Unknown"),
             "date": appt["date"],
             "slot": appt["slot"],
+            "age": patient.get("age", "N/A"),
+            "phone": patient.get("phone_number", "N/A"),
             "appointment_id": str(appt["_id"])
         })
 
@@ -240,6 +267,12 @@ async def doctor_dashboard(request: Request):
         "doctor": doctor,
         "patients": patient_data
     })
+    
+@app.get("/logout")
+async def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse("/", status_code=302)
+
 
 @app.get("/Cardiology", response_class=HTMLResponse)
 async def cardiology_page(request: Request):
