@@ -10,8 +10,6 @@ from bson import ObjectId
 from datetime import datetime
 
 
-
-
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key="your-very-secret-key")
 
@@ -194,9 +192,9 @@ async def get_doctor_login(request: Request):
 
 @app.post("/doctor/login", response_class=HTMLResponse)
 async def post_doctor_login(
-        request: Request,
-        email: str = Form(...),
-        password: str = Form(...)
+    request: Request,
+    email: str = Form(...),
+    password: str = Form(...)
 ):
     doctor = doctor_collection.find_one({"email": email})
     if not doctor or not bcrypt.verify(password, doctor["password"]):
@@ -208,41 +206,40 @@ async def post_doctor_login(
 
     return RedirectResponse("/", status_code=302)
 
+
 @app.get("/doctor/dashboard", response_class=HTMLResponse)
 async def doctor_dashboard(request: Request):
     doctor_id = request.session.get("user")
     if not doctor_id:
-        return RedirectResponse("/auth", status_code=302)
+        return RedirectResponse("/doctor/login", status_code=302)
 
-    # Get all appointments for this doctor
-    appointments = db["Appointments"].find({"doctor_id": doctor_id})  # or patient_id
+    try:
+        doctor_obj_id = ObjectId(doctor_id)
+    except:
+        return HTMLResponse("Invalid doctor ID", status_code=400)
+
+    appointments = list(db["Appointments"].find({"doctor_id": doctor_obj_id}))
 
     patient_data = []
-    for a in appointments:
-        patient = db["Patients"].find_one({"_id": a["patient_id"]})
+    for appt in appointments:
+        patient = db["Patients"].find_one({"_id": appt["patient_id"]})
+        if not patient:
+            continue
         patient_data.append({
-            "name": patient["name"],
-            "email": patient["email"],
-            "date": a["date"],
-            "slot": a["slot"],
-            "appointment_id": str(a["_id"])
+            "name": patient.get("full_name", "Unknown"),
+            "email": patient.get("email", "Unknown"),
+            "date": appt["date"],
+            "slot": appt["slot"],
+            "appointment_id": str(appt["_id"])
         })
 
-    doctor = db["Doctors"].find_one({"_id": ObjectId(doctor_id)})
+    doctor = db["Doctors"].find_one({"_id": doctor_obj_id})
 
     return templates.TemplateResponse("doctor/dashboard.html", {
         "request": request,
         "doctor": doctor,
         "patients": patient_data
     })
-
-
-@app.get("/logout")
-async def logout(request: Request):
-    request.session.clear()
-    return RedirectResponse("/", status_code=302)
-
-
 
 @app.get("/Cardiology", response_class=HTMLResponse)
 async def cardiology_page(request: Request):
@@ -253,17 +250,7 @@ async def cardiology_page(request: Request):
         "user_name": user_name,
         "role": role
     })
-
-@app.get("/Gynecology", response_class=HTMLResponse)
-async def gynecology_page(request: Request):
-    user_name = request.session.get("user_name")
-    role = request.session.get("role")
-    return templates.TemplateResponse("gyneaco.html", {
-        "request": request,
-        "user_name": user_name,
-        "role": role
-    })
-
+    
 @app.get("/Dentist", response_class=HTMLResponse)
 async def dentist_page(request: Request):
     user_name = request.session.get("user_name")
@@ -273,9 +260,19 @@ async def dentist_page(request: Request):
         "user_name": user_name,
         "role": role
     })
-
+    
+@app.get("/Gynecology", response_class=HTMLResponse)
+async def gynecologist_page(request: Request):
+    user_name = request.session.get("user_name")
+    role = request.session.get("role")
+    return templates.TemplateResponse("gyneaco.html", {
+        "request": request,
+        "user_name": user_name,
+        "role": role
+    })
+    
 @app.get("/Neurology", response_class=HTMLResponse)
-async def neurology_page(request: Request):
+async def gynecologist_page(request: Request):
     user_name = request.session.get("user_name")
     role = request.session.get("role")
     return templates.TemplateResponse("neurology.html", {
@@ -283,19 +280,9 @@ async def neurology_page(request: Request):
         "user_name": user_name,
         "role": role
     })
-
-@app.get("/Orthopedic", response_class=HTMLResponse)
-async def orthopedic_page(request: Request):
-    user_name = request.session.get("user_name")
-    role = request.session.get("role")
-    return templates.TemplateResponse("ortho.html", {
-        "request": request,
-        "user_name": user_name,
-        "role": role
-    })
-
+    
 @app.get("/Pediatrician", response_class=HTMLResponse)
-async def pediatrician_page(request: Request):
+async def pediatric_page(request: Request):
     user_name = request.session.get("user_name")
     role = request.session.get("role")
     return templates.TemplateResponse("pediatrics.html", {
@@ -303,12 +290,22 @@ async def pediatrician_page(request: Request):
         "user_name": user_name,
         "role": role
     })
-
+    
 @app.get("/Psychiatrist", response_class=HTMLResponse)
-async def psychiatrist_page(request: Request):
+async def pediatric_page(request: Request):
     user_name = request.session.get("user_name")
     role = request.session.get("role")
     return templates.TemplateResponse("psychiatry.html", {
+        "request": request,
+        "user_name": user_name,
+        "role": role
+    })
+    
+@app.get("/Orthopedic", response_class=HTMLResponse)
+async def ortho_page(request: Request):
+    user_name = request.session.get("user_name")
+    role = request.session.get("role")
+    return templates.TemplateResponse("ortho.html", {
         "request": request,
         "user_name": user_name,
         "role": role

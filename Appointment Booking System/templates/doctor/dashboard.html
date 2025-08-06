@@ -7,11 +7,15 @@
             font-family: 'Segoe UI', sans-serif;
             background-color: #f4f4f4;
             padding: 30px;
+            background-image: url('../static/images/bg.jpg');
+            background-attachment: fixed;
+           background-size: cover;
+           background-position: center;
         }
 
         .card {
             background: white;
-            max-width: 700px;
+            max-width: 800px;
             margin: auto;
             padding: 30px;
             border-radius: 12px;
@@ -23,23 +27,24 @@
             color: #2c3e50;
         }
 
-        .patient {
+        .patient-card {
+            background-color: #f9f9f9;
+            padding: 20px;
             margin-bottom: 20px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 10px;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
         }
 
-        .patient:last-child {
-            border-bottom: none;
-        }
-        .patient h3 {
+        .patient-card h3 {
             margin: 0;
             color: #34495e;
         }
-        .patient p {
-            margin: 5px 0;
+
+        .patient-card p {
+            margin: 6px 0;
             color: #7f8c8d;
         }
+
         .btn-home {
             display: block;
             width: fit-content;
@@ -54,9 +59,6 @@
         .btn-home:hover {
             background-color: #17a2b8;
             transition: background-color 0.3s ease;
-        }
-        .btn-home:active {
-            background-color: #138496;
         }
 
         .btn-edit, .btn-delete {
@@ -86,23 +88,20 @@
 </head>
 <body>
     <div class="card">
-        <h2>Appointments for Dr. {{ doctor.full_name }}</h2>
+        <h2>Appointments for {{ doctor.full_name }}</h2>
 
         {% for patient in patients %}
         <div class="patient-card">
             <h3>{{ patient.name }}</h3>
-            <p>Email: {{ patient.email }}</p>
-            <p>Appointment Date: {{ patient.date }}</p>
-            <p>Time Slot: {{ patient.slot }}</p>
+            <p><strong>Email:</strong> {{ patient.email }}</p>
+            <p><strong>Appointment Date:</strong> {{ patient.date }}</p>
+            <p><strong>Time Slot:</strong> {{ patient.slot }}</p>
 
-            <!-- EDIT Button -->
-            <a href="/appointment/edit/{{ patient.appointment_id }}" class="btn-edit">Edit</a>
-
-            <!-- DELETE Button -->
-            <a href="/appointment/delete/{{ patient.appointment_id }}" class="btn-delete"
-            onclick="return confirm('Are you sure you want to cancel this appointment?');">
-            Cancel
-            </a>
+            <div class="appointment-actions">
+                <a href="/appointment/edit/{{ patient.appointment_id }}" class="btn-edit">Edit</a>
+                <a href="/appointment/delete/{{ patient.appointment_id }}" class="btn-delete"
+                onclick="return confirm('Are you sure you want to cancel this appointment?');">Cancel</a>
+            </div>
         </div>
         {% endfor %}
 
@@ -110,10 +109,10 @@
             <p>No appointments found.</p>
         {% endif %}
 
-
-
+        <a href="/" class="btn-home">Back to Home</a>
     </div>
 </body>
 </html>
+
 
 
