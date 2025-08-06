@@ -134,8 +134,8 @@
 
 
        .btn-appointment {
-           background-color: #28a745;
-           border-color: #28a745;
+           background-color: #1a728a;
+           border-color: #1a728a;
            color: white;
            font-weight: 600;
            padding: 12px 25px;
@@ -143,8 +143,8 @@
        }
 
        .btn-appointment:hover {
-           background-color: #218838;
-           border-color: #1e7e34;
+           background-color: #1a728a;
+           border-color: #1a728a;
            transform: translateY(-2px);
            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
        }

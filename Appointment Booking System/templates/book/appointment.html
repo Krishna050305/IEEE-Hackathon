@@ -96,19 +96,35 @@
 <body>
     <h2>Book Appointment with {{ doctor.full_name }}</h2>
 
-    <form method="post">
+    {% if edit %}
+        <form method="post" action="/appointment/edit/{{ appointment_id }}">
+    {% else %}
+        <form method="post">
+            {% if edit %}
+                <input type="hidden" name="edit_id" value="{{ edit_id }}">
+            {% endif %}
+            
+    {% endif %}
+
         <label for="date">Choose Date:</label>
-        <input type="date" id="date" name="date" min="{{ today }}" required>
+
+        <input type="date" id="date" name="date" min="{{ today }}" value="{{ existing_date or '' }}" required>
+
 
         <label>Choose Time Slot:</label>
         <div class="slots">
+
             {% for slot in available_slots %}
                 <div class="slot-option">
-                    <input type="radio" id="slot{{ loop.index }}" name="slot" value="{{ slot }}" required>
+                    <input type="radio" id="slot{{ loop.index }}" name="slot" value="{{ slot }}" required
+                        {% if slot == existing_slot %}checked{% endif %}>
                     <label for="slot{{ loop.index }}">{{ slot }}</label>
+
                 </div>
             {% endfor %}
         </div>
+
+
 
         <button type="submit">Confirm Appointment</button>
     </form>

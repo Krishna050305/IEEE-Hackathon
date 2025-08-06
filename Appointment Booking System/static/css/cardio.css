@@ -14,7 +14,7 @@
            overflow-x: hidden;
            background-image: url("../images/wallpaper.jpg");
            background-attachment: fixed;
-            background-repeat: no-repeat;
+           background-repeat: no-repeat;
            background-size: cover;
            background-position: center;
            margin: 0;
