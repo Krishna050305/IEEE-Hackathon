@@ -7,7 +7,7 @@
             font-family: 'Segoe UI', sans-serif;
             background-color: #f4f4f4;
             padding: 30px;
-            background-image: url('../static/images/bg.jpg');
+            background-image: url('../static/images/bg.png');
             background-attachment: fixed;
            background-size: cover;
            background-position: center;
@@ -42,7 +42,7 @@
 
         .patient-card p {
             margin: 6px 0;
-            color: #7f8c8d;
+            color: #000000ff;
         }
 
         .btn-home {
@@ -70,7 +70,7 @@
             margin-right: 10px;
         }
         .btn-edit {
-            background-color: #2ee81dff;
+            background-color: #15bd06ff;
             color: white;
         }
         .btn-edit:hover {
@@ -100,7 +100,7 @@
             <p><strong>Slot:</strong> {{ patient.slot }}</p>
 
             <div class="appointment-actions">
-                <a href="/appointment/edit/{{ patient.appointment_id }}" class="btn-edit">Edit</a>
+                <a href="/appointment/edit/{{ patient.appointment_id }}" class="btn-edit">Update</a>
                 <a href="/appointment/delete/{{ patient.appointment_id }}" class="btn-delete"
                 onclick="return confirm('Are you sure you want to cancel this appointment?');">Cancel</a>
             </div>

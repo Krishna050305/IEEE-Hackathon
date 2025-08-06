@@ -572,17 +572,20 @@ async def appointment_confirmation(request: Request, slot: str, date: str, docto
         "date": date
     })
 
-
-#update 
 @app.get("/appointment/edit/{appointment_id}", response_class=HTMLResponse)
 async def edit_appointment(request: Request, appointment_id: str):
     appointment = db["Appointments"].find_one({"_id": ObjectId(appointment_id)})
+    if not appointment:
+        return HTMLResponse("Appointment not found", status_code=404)
+
     doctor = db["Doctors"].find_one({"_id": appointment["doctor_id"]})
+    patient = db["Patients"].find_one({"_id": appointment["patient_id"]})
     today = datetime.now().strftime("%Y-%m-%d")
 
     return templates.TemplateResponse("appointment.html", {
         "request": request,
         "doctor": doctor,
+        "patient": patient,
         "date": appointment["date"],
         "slot": appointment["slot"],
         "available_slots": [
@@ -593,6 +596,7 @@ async def edit_appointment(request: Request, appointment_id: str):
         "edit": True,
         "appointment_id": appointment_id
     })
+
 
 @app.post("/appointment/edit/{appointment_id}")
 async def update_appointment(
@@ -606,23 +610,40 @@ async def update_appointment(
         {"$set": {"date": date, "slot": slot}}
     )
 
-    # Redirect to patient dashboard with query parameters (optional)
-    return RedirectResponse(f"/patient/dashboard?updated_date={date}&updated_slot={slot}", status_code=302)
-
-
-@app.get("/appointment/delete/{appointment_id}")
-async def delete_appointment(request: Request, appointment_id: str):
-    db["Appointments"].delete_one({"_id": ObjectId(appointment_id)})
+    # Redirect based on role
     role = request.session.get("role")
 
     if role == "doctor":
         return RedirectResponse("/doctor/dashboard", status_code=302)
+    return RedirectResponse(f"/patient/dashboard?updated_date={date}&updated_slot={slot}", status_code=302)
+
+@app.get("/appointment/delete/{appointment_id}")
+async def delete_appointment(request: Request, appointment_id: str):
+    role = request.session.get("role")
+    user_id = request.session.get("user")
+
+    if not user_id or not role:
+        return RedirectResponse("/auth", status_code=302)
+
+    appointment = db["Appointments"].find_one({"_id": ObjectId(appointment_id)})
+    if not appointment:
+        return HTMLResponse("Appointment not found", status_code=404)
+
+    # 🛡 Ensure patient can only delete their own appointments
+    if role == "patient" and str(appointment["patient_id"]) != user_id:
+        return HTMLResponse("Unauthorized", status_code=403)
+
+    # 🛡 Ensure doctor can only delete their own appointments
+    if role == "doctor" and str(appointment["doctor_id"]) != user_id:
+        return HTMLResponse("Unauthorized", status_code=403)
+
+    db["Appointments"].delete_one({"_id": ObjectId(appointment_id)})
+
+    # ✅ Redirect to appropriate dashboard
+    if role == "doctor":
+        return RedirectResponse("/doctor/dashboard", status_code=302)
     return RedirectResponse("/patient/dashboard", status_code=302)
 
-@app.get("/delete/{appointment_id}")
-async def delete_appointment(appointment_id: str):
-    db["Appointments"].delete_one({"_id": ObjectId(appointment_id)})
-    return RedirectResponse("/patient/dashboard", status_code=302)
 
 
 
