@@ -126,14 +126,17 @@ async def post_patient_login(
     return RedirectResponse("/", status_code=302)
 
 @app.get("/patient/dashboard", response_class=HTMLResponse)
-async def patient_dashboard(request: Request):
+async def patient_dashboard(
+    request: Request,
+    updated_date: str = Query(None),
+    updated_slot: str = Query(None)
+):
     patient_id = request.session.get("user")
     if not patient_id:
         return RedirectResponse("/auth", status_code=status.HTTP_302_FOUND)
 
     patient = db["Patients"].find_one({"_id": ObjectId(patient_id)})
 
-    # Fetch all appointments for this patient
     appointments = list(db["Appointments"].find({"patient_id": ObjectId(patient_id)}))
     for appt in appointments:
         doctor = db["Doctors"].find_one({"_id": appt["doctor_id"]})
@@ -147,8 +150,11 @@ async def patient_dashboard(request: Request):
     return templates.TemplateResponse("patient/dashboard.html", {
         "request": request,
         "patient": patient,
-        "appointments": appointments
+        "appointments": appointments,
+        "updated_date": updated_date,
+        "updated_slot": updated_slot
     })
+
 
 
 # Logout
@@ -522,13 +528,20 @@ async def edit_appointment(request: Request, appointment_id: str):
     })
 
 @app.post("/appointment/edit/{appointment_id}")
-async def update_appointment(request: Request, appointment_id: str, date: str = Form(...), slot: str = Form(...)):
+async def update_appointment(
+    request: Request,
+    appointment_id: str,
+    date: str = Form(...),
+    slot: str = Form(...)
+):
     db["Appointments"].update_one(
         {"_id": ObjectId(appointment_id)},
         {"$set": {"date": date, "slot": slot}}
     )
 
-    return RedirectResponse("/patient/dashboard", status_code=302)
+    # Redirect to patient dashboard with query parameters (optional)
+    return RedirectResponse(f"/patient/dashboard?updated_date={date}&updated_slot={slot}", status_code=302)
+
 
 @app.get("/appointment/delete/{appointment_id}")
 async def delete_appointment(request: Request, appointment_id: str):
