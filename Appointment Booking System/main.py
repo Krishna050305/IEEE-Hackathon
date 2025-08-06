@@ -516,11 +516,23 @@ async def submit_booking(
 
     if existing:
         return HTMLResponse(content="""
-            <div style="
+            <body style="
+                margin: 0;
+                padding: 0;
+                background-image: url('/static/images/bg.png');  /* ✅ make sure it's stored in static/images/ */
+                background-size: cover;
+                background-repeat: no-repeat;
+                background-position: center;
+                height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: 'Segoe UI', sans-serif;
+            ">
+            <div style=" 
                 max-width: 600px;
                 margin: 80px auto;
                 padding: 40px;
-                background-image: "../static/images/bg.jpg";
                 background-color: #fff0f0;
                 border: 2px solid #ff4d4f;
                 border-radius: 12px;
