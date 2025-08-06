@@ -11,7 +11,9 @@
             background-color: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(6px);
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+            height: 80px; /* 👈 Add this */
         }
+
 
         body {
             font-family: 'Poppins', sans-serif;
@@ -21,7 +23,7 @@
             background-position: center;
             background-attachment: fixed;
             margin: 0;
-            padding: 40px 0;
+            padding-top: 80px;
             min-height: 100vh;
         }
 
