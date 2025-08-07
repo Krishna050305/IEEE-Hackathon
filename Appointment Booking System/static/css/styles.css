@@ -507,6 +507,7 @@ p {
     background-size: cover;
     background-position: center;
     margin: 0;
+    opacity: 0.9;
 }
 
 .about-container {
@@ -521,7 +522,7 @@ p {
     border-radius: 1.3rem;
     box-shadow: 0 4px 24px rgba(24, 60, 90, 0.10);
     padding: 1.5rem 2rem;
-    opacity: 0.3;
+   
 }
 
 .about-content {
