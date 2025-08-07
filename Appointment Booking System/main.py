@@ -599,7 +599,10 @@ async def edit_appointment(request: Request, appointment_id: str):
     patient = db["Patients"].find_one({"_id": appointment["patient_id"]})
     today = datetime.now().strftime("%Y-%m-%d")
 
-    return templates.TemplateResponse("appointment.html", {
+    is_doctor = request.session.get("role") == "doctor"
+    template_name = "doctor_edit_appointment.html" if is_doctor else "appointment.html"
+
+    return templates.TemplateResponse(template_name, {
         "request": request,
         "doctor": doctor,
         "patient": patient,
@@ -613,6 +616,7 @@ async def edit_appointment(request: Request, appointment_id: str):
         "edit": True,
         "appointment_id": appointment_id
     })
+
 
 
 @app.post("/appointment/edit/{appointment_id}")
