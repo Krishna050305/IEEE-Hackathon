@@ -127,8 +127,9 @@ async def post_patient_login(
 @app.get("/patient/dashboard", response_class=HTMLResponse)
 async def patient_dashboard(
     request: Request,
-    updated_date: str = Query(None),
-    updated_slot: str = Query(None)
+    action: str = None,
+    date: str = None,
+    slot: str = None
 ):
     patient_id = request.session.get("user")
     if not patient_id:
@@ -148,12 +149,11 @@ async def patient_dashboard(
 
     return templates.TemplateResponse("patient/dashboard.html", {
         "request": request,
-        "patient": patient,
         "appointments": appointments,
-        "updated_date": updated_date,
-        "updated_slot": updated_slot
+        "action": action,
+        "date": date,
+        "slot": slot
     })
-
 
 
 # Logout
@@ -568,7 +568,12 @@ async def submit_booking(
     if edit_id:
         db["Appointments"].delete_one({"_id": ObjectId(edit_id)})
 
-    return RedirectResponse(f"/patient/dashboard?updated_date={date}&updated_slot={slot}", status_code=302)
+    action = "updated" if edit_id else "booked"
+    return RedirectResponse(
+        f"/patient/dashboard?action={action}&date={date}&slot={slot}",
+        status_code=302
+)
+
 
 
 @app.get("/confirmation", response_class=HTMLResponse)
