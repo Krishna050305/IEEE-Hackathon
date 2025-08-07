@@ -502,7 +502,15 @@ p {
     border-radius: 1.3rem;
     box-shadow: 0 4px 24px rgba(24, 60, 90, 0.10);
     display: flex;                 
-    justify-content: center;       
+    justify-content: center;      
+     background-attachment: fixed;
+    background-size: cover;
+    background-position: center;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column; 
 }
 
 .about-container {
