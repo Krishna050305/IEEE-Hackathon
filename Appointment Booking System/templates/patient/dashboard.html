@@ -158,13 +158,16 @@
         </div>
     {% endfor %}
 
-        {% if updated_date and updated_slot %}
-            <p class="highlight">
-                Appointment updated to {{ updated_date }} at {{ updated_slot }}!
+        {% if action == "booked" %}
+            <p style="color: green; font-weight: bold; text-align: center;">
+                ✅ Appointment booked for {{ date }} at {{ slot }}!
             </p>
-        {% elif appointments|length == 1 %}
-            <p class="highlight">Appointment Booked!</p>
+        {% elif action == "updated" %}
+            <p style="color: green; font-weight: bold; text-align: center;">
+                ✅ Appointment updated to {{ date }} at {{ slot }}!
+            </p>
         {% endif %}
+
 
         {% if not appointments %}
             <p>No appointments found.</p>

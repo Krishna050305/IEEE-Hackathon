@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reschedule Patient Appointment</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-image: url('/static/images/bg.png');
+            background-size: cover;
+            background-position: center;
+            padding: 50px;
+        }
+        .container {
+            background-color: #ffffffcc;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            margin: auto;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 15px;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 8px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        button {
+            margin-top: 20px;
+            padding: 12px 24px;
+            background-color: #1EB8CD;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #17a2b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Reschedule Appointment for {{ patient.full_name }}</h2>
+        <form method="post">
+            <label>Date</label>
+            <input type="date" name="date" value="{{ date }}" min="{{ today }}" required>
+
+            <label>Available Slots</label>
+            <select name="slot" required>
+                {% for s in available_slots %}
+                    <option value="{{ s }}" {% if s == slot %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+
+            <button type="submit">Update Appointment</button>
+        </form>
+    </div>
+</body>
+</html>
