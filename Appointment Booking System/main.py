@@ -489,9 +489,9 @@ async def submit_booking(
     slot: str = Form(...),
     edit_id: str = Form(None)
 ):
-    patient_id = request.session.get("user")
     if not patient_id:
-        return RedirectResponse("/auth", status_code=status.HTTP_302_FOUND)
+        return RedirectResponse("/", status_code=302)
+
 
     doctor = db["Doctors"].find_one({"_id": ObjectId(doctor_id)})
     if not doctor:

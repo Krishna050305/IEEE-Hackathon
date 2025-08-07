@@ -9,6 +9,22 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 </head>
 
+<body>
+
+    {% if request.query_params.get("error") == "login_required" %}
+        <div class="alert alert-warning" style="
+            text-align: center;
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 20px auto;
+            max-width: 600px;
+        ">
+            ⚠️ Please log in to book an appointment.
+        </div>
+        {% endif %}
+
     <header class="main-header">
         <nav class="navbar">
             <div class="logo">
