@@ -49,12 +49,22 @@ async def home(request: Request):
 
 @app.get("/auth", response_class=HTMLResponse)
 async def choose_role(request: Request):
-    user = request.session.get("user")
+    user_id = request.session.get("user")
+    role = request.session.get("role")
 
-    request.session["user"] = str(user["_id"])         # already exists
-    request.session["role"] = user["role"]             # "patient" or "doctor"
+    if user_id and role:
+        # Already logged in, redirect to appropriate dashboard
+        if role == "patient":
+            return RedirectResponse("/patient/dashboard", status_code=302)
+        elif role == "doctor":
+            return RedirectResponse("/doctor/dashboard", status_code=302)
+    else:
+        return RedirectResponse("/", status_code=302)
+    
 
+    # If not logged in, show role selection page
     return templates.TemplateResponse("select_role.html", {"request": request})
+
 
 @app.post("/auth", response_class=HTMLResponse)
 async def login_user(request: Request, email: str = Form(...), password: str = Form(...)):
