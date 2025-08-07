@@ -499,10 +499,12 @@ async def submit_booking(
     slot: str = Form(...),
     edit_id: str = Form(None)
 ):
+    # ✅ Get patient ID from session
+    patient_id = request.session.get("user")
     if not patient_id:
         return RedirectResponse("/", status_code=302)
 
-
+    # ✅ Get doctor
     doctor = db["Doctors"].find_one({"_id": ObjectId(doctor_id)})
     if not doctor:
         return HTMLResponse("Doctor not found", status_code=404)
@@ -511,7 +513,7 @@ async def submit_booking(
     if not clinic_id:
         return HTMLResponse("Clinic not associated with this doctor", status_code=400)
 
-    # Check for existing appointment
+    # ✅ Check for slot conflict
     query = {
         "doctor_id": ObjectId(doctor_id),
         "date": date,
@@ -519,17 +521,15 @@ async def submit_booking(
     }
 
     if edit_id:
-        # If editing, exclude the current appointment being edited
         query["_id"] = {"$ne": ObjectId(edit_id)}
 
     existing = db["Appointments"].find_one(query)
-
     if existing:
         return HTMLResponse(content="""
             <body style="
                 margin: 0;
                 padding: 0;
-                background-image: url('/static/images/bg.png');  /* ✅ make sure it's stored in static/images/ */
+                background-image: url('/static/images/bg.png');
                 background-size: cover;
                 background-repeat: no-repeat;
                 background-position: center;
@@ -547,7 +547,6 @@ async def submit_booking(
                 border: 2px solid #ff4d4f;
                 border-radius: 12px;
                 box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-                font-family: 'Segoe UI', sans-serif;
                 text-align: center;
             ">
                 <h2 style="color: #c0392b; margin-bottom: 20px;">❌ Slot Already Booked</h2>
@@ -565,7 +564,7 @@ async def submit_booking(
             </div>
         """, status_code=409)
 
-    # Insert new appointment
+    # ✅ Create appointment
     db["Appointments"].insert_one({
         "doctor_id": ObjectId(doctor_id),
         "clinic_id": clinic_id,
@@ -574,7 +573,6 @@ async def submit_booking(
         "date": date
     })
 
-    # Delete old appointment if editing
     if edit_id:
         db["Appointments"].delete_one({"_id": ObjectId(edit_id)})
 
@@ -582,7 +580,7 @@ async def submit_booking(
     return RedirectResponse(
         f"/patient/dashboard?action={action}&date={date}&slot={slot}",
         status_code=302
-)
+    )
 
 
 
