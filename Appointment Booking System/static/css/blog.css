@@ -1,0 +1,170 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+.logo a {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 1.25rem;
+    color: #2c3e50;
+    text-decoration: none;
+}
+
+.logo img {
+    height: 40px;
+    border-radius: 50%;
+}
+
+.nav-links,
+.nav-utility-icons {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.nav-links li,
+.dropdown-menu li {
+    list-style: none;
+}
+
+.nav-links a,
+.dropdown-menu a {
+    text-decoration: none;
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.nav-links a:hover,
+.dropdown-menu a:hover {
+    color: #1eb8cd;
+}
+
+.call-info {
+    font-size: 0.875rem;
+    text-align: right;
+}
+
+.phone-number {
+    font-weight: 600;
+}
+
+.dropdown.user-dropdown .dropdown-menu {
+    background-color: #ffffff;
+    border-radius: 6px;
+    padding: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.container {
+    max-width: 1280px;
+    margin: auto;
+    padding: 1rem;
+}
+
+#faqs summary {
+    cursor: pointer;
+}
+
+details > summary::marker {
+    display: none;
+}
+
+details[open] summary:after {
+    content: "-";
+    color: #1eb8cd;
+}
+
+details summary:after {
+    content: '▼';
+    float: right;
+    font-size: 1.5rem;
+    color: #1eb8cd;
+    transition: transform 0.3s ease;
+}
+
+details[open] summary:after {
+    transform: rotate(180deg);
+}
+
+.bg-gray-100 {
+    background-color: #f3f4f6;
+}
+
+.shadow-md {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+.testimonial-slider .testimonial {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+}
+
+.testimonial img {
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    margin-bottom: 1rem;
+}
+
+.testimonial-text {
+    font-style: italic;
+    color: #555;
+    margin-bottom: 0.5rem;
+}
+
+.testimonial-author {
+    font-weight: 600;
+    color: #333;
+}
+
+.footer {
+    background-color: #ffffffcc;
+    padding: 2rem 1rem;
+    margin-top: 4rem;
+}
+
+.footer-content {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 2rem;
+}
+
+.footer-links h3,
+.footer-contact h3 {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+}
+
+.footer-links ul,
+.footer-contact ul {
+    list-style: none;
+    padding: 0;
+    font-size: 0.95rem;
+}
+
+.footer-links li,
+.footer-contact li {
+    margin-bottom: 0.5rem;
+}
+
+.footer-links a {
+    text-decoration: none;
+    color: #2c3e50;
+}
+
+.footer-links a:hover {
+    color: #1eb8cd;
+}
+
+.footer-base {
+    text-align: center;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: #666;
+}

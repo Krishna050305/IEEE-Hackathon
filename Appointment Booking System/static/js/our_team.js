@@ -11,7 +11,7 @@ const teamMembers = [
     },
     {
         name: "Swara Deshpande",
-        role: "Frontend and Backend Developer",
+        role: "Frontend & Backend Developer",
         image: "/static/images/swara.jpg"
     },
     {

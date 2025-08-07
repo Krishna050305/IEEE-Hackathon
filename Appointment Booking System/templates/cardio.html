@@ -13,7 +13,7 @@
         <header class="main-header">
             <nav class="navbar">
                 <div class="logo">
-                    <a href="#">
+                    <a href="/">
                         <img src="./static/images/logo.jpg" alt="Nexus-Clinic Logo">
                         Nexus-Clinic
                     </a>
@@ -49,7 +49,7 @@
                         <span>Call Emergency</span>
                         <span class="phone-number">2381-50060070</span>
                     </div>
-                    {% if user_name %}
+                  {% if user_name %}
                 <div class="dropdown user-dropdown">
                     <a href="#" class="btn btn-primary dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                     Hello, {{ user_name }}
@@ -67,7 +67,6 @@
                 <a href="/patient/login" class="btn btn-primary btn-login">Patient Login</a>
                 <a href="/doctor/login" class="btn btn-primary btn-signup">Doctor Login</a>
                 {% endif %}
-
 
                 </div>
                 <div class="menu-toggle" id="mobile-menu-toggle">
