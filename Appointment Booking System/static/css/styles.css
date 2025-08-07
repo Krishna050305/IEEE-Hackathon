@@ -371,7 +371,7 @@
        .hero-section {
            position: relative;
            max-width: 1200px;
-           margin: 40px auto;
+           margin: 40px 1.2rem;
            padding: 0 20px;
            overflow: hidden;
 
@@ -461,31 +461,6 @@
        }
 
 
-       .bg-heartbeat {
-           top: 20%;
-           left: 45%;
-           width: 100px;
-       }
-
-       .bg-tooth {
-           bottom: 10%;
-           right: 30%;
-           width: 60px;
-       }
-
-       .bg-pulse {
-           top: 5%;
-           right: 5%;
-           width: 80px;
-       }
-
-       .bg-brain {
-           bottom: 25%;
-           left: 5%;
-           width: 70px;
-       }
-
-
 
        .hero-nav-arrow {
            position: absolute;
@@ -518,7 +493,78 @@
        .hero-nav-right {
            right: 0px;
        }
+.about-section {
+  background-color: #fff;
+  margin-top: 0.4rem;
+  padding: 2.5rem 2rem ;
+  border-radius: 1.3rem;
+  box-shadow: 0 4px 24px rgba(24, 60, 90, 0.10);
+  border-radius: 1.3rem;
 
+
+}
+.about-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  gap: 3rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  background: #fff;
+  border-radius: 1.3rem;
+  box-shadow: 0 4px 24px rgba(24, 60, 90, 0.10);
+  padding: 1.5rem 2rem;
+}
+.about-content {
+  flex: 2 1 340px;
+}
+
+.about-content p {
+  font-size: 1.13rem;
+  color: #2f3c4c;
+  margin-bottom: 2rem;
+  line-height: 1.7;
+}
+.about-features {
+  display: flex;
+  gap: 1.7rem;
+  flex-wrap: wrap;
+}
+.about-feature {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #e9f3fe;
+  border-radius: 0.8rem;
+  padding: 0.95rem 1rem;
+  min-width: 110px;
+  color: #1976d2;
+  font-weight: 600;
+  box-shadow: 0 2px 9px rgba(25, 118, 210, 0.04);
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  transition: box-shadow 0.15s;
+}
+
+@media (max-width: 900px) {
+  .about-container {
+    flex-direction: column;
+    padding: 1.1rem 1rem;
+    gap: 2rem;
+  }
+  .team-members {
+    flex-direction: row;
+    justify-content: center;
+    gap: 1rem;
+  }
+}
+@media (max-width: 600px) {
+  .about-section {padding: 1.1rem 0.2rem;}
+  .about-container {padding: 0.7rem 0.2rem;}
+  .team-members {flex-direction: column; align-items: center;}
+  .about-content h2 {font-size: 1.43rem;}
+}
+ 
 
 
        .quick-actions-section {
