@@ -33,13 +33,15 @@
             color: #333;
         }
 
+
+        /* adjust the containers two above and two below */
         .team-container {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 40px 60px; /* 40px vertical, 60px horizontal */
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 0 20px;
+            grid-template-columns: repeat(2, 1fr); /* Force two per row */
+            gap: 20px;
+            padding: 40px 20px;
+            max-width: 800px; /* narrower for a centered look */
+            margin: auto;
         }
 
         .team-member {
@@ -118,8 +120,7 @@
 
         @media (max-width: 768px) {
             .team-container {
-                grid-template-columns: 1fr; /* single column on small screens */
-                padding: 20px;
+                grid-template-columns: 1fr; /* One per row on mobile */
             }
         }
 

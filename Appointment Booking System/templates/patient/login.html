@@ -74,20 +74,28 @@
     <form method="post" action="/patient/login">
       <div class="mb-3">
         <label class="form-label">Email</label>
-        <input type="email" name="email" class="form-control" required>
+        <input type="email" name="email" class="form-control">
       </div>
       <div class="mb-3">
         <label class="form-label">Password</label>
-        <input type="password" name="password" class="form-control" required>
+        <input type="password" name="password" class="form-control">
       </div>
+
       <button type="submit" class="btn btn-success">Login</button>
+
+      <!-- Google Login Button -->
+      <a href="/login/google" class="btn btn-outline w-100 mb-3 d-inline-flex align-items-center justify-content-center" style="gap:.5rem;">
+        <img src="/static/images/google.png" alt="" width="18" height="18">
+            Continue with Google
+        </a>
     </form>
 
     <div class="form-footer">
-      <p>New user? <a href="/patient/register">Create an account</a></p>
+      <p>New patient? <a href="/patient/register">Register here</a></p>
     </div>
   </div>
 </body>
 </html>
+
 
 

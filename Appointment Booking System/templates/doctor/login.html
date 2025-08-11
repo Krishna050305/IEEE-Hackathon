@@ -71,6 +71,12 @@
       <div class="alert alert-danger">{{ error }}</div>
     {% endif %}
 
+    <!-- Put Google first and OUTSIDE the form -->
+
+
+    <div class="text-center text-muted my-2">or</div>
+
+    <!-- Keep your email/password form as-is -->
     <form method="post" action="/doctor/login">
       <div class="mb-3">
         <label class="form-label">Email</label>
@@ -80,7 +86,12 @@
         <label class="form-label">Password</label>
         <input type="password" name="password" class="form-control" required>
       </div>
-      <button type="submit" class="btn btn-success">Login</button>
+      <button type="submit" class="btn btn-success w-100">Login</button>
+
+          <a href="/login/google" class="btn btn-outline w-100 mb-3 d-inline-flex align-items-center justify-content-center" style="gap:.5rem;">
+            <img src="/static/images/google.png" alt="" width="18" height="18">
+            Continue with Google
+          </a>
     </form>
 
     <div class="form-footer">
