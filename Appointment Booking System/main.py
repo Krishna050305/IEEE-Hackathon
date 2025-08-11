@@ -1,16 +1,25 @@
-from fastapi import FastAPI, Request, Form, status, Query, Depends
+from fastapi import FastAPI, Request, Form, status, Query, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.responses import RedirectResponse
 from passlib.hash import bcrypt
 from passlib.context import CryptContext
 from pymongo import MongoClient
 from bson import ObjectId
 from datetime import datetime
+<<<<<<< HEAD
 from dotenv import load_dotenv
 import os
+=======
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+import os
+from authlib.integrations.starlette_client import OAuth
+from dotenv import load_dotenv
+>>>>>>> 8f9f7d96c0923300f3576f32f08600aed73f6c81
 
+load_dotenv()
 
 
 
@@ -23,7 +32,26 @@ import os
 
 load_dotenv()
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key="your-very-secret-key")
+
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "dev-secret"))
+
+oauth = OAuth()
+oauth.register(
+    name="google",
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"},
+)
+
+#Implementing o-auth2 for security
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
+@app.post("/token")
+async def token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = db["Users"].find_one({"email": form_data.username})
+    if not user or not bcrypt.verify(form_data.password, user["password"]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    return {"access_token": str(user["_id"]), "token_type": "bearer"}
 
 mongo_uri = os.getenv('MONGO_URI')
 client = MongoClient(mongo_uri)
@@ -41,7 +69,6 @@ db = client["ApoointmentBooking"]  # Replace with actual DB name
 # Templates
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
 
 # Homepage with Role Selection
 @app.get("/", response_class=HTMLResponse)
@@ -99,6 +126,39 @@ async def login_user(request: Request, email: str = Form(...), password: str = F
         return RedirectResponse("/doctor/dashboard", status_code=302)
     else:
         return RedirectResponse("/patient/dashboard", status_code=302)
+    
+    
+#Google OAuth2 
+@app.get("/login/google")
+async def login_google(request: Request):
+    # optional: add 'next' to return users back where they came from
+    redirect_uri = os.getenv("OAUTH_REDIRECT_URI")
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+@app.get("/auth/google/callback")
+async def auth_google_callback(request: Request):
+    token = await oauth.google.authorize_access_token(request)
+    userinfo = token.get("userinfo") or await oauth.google.parse_id_token(request, token)
+    email = userinfo["email"]
+    name = userinfo.get("name") or userinfo.get("given_name") or "User"
+
+    # Try patient first
+    patient = db["Patients"].find_one({"email": email})
+    doctor  = db["Doctors"].find_one({"email": email})
+
+    if patient:
+        user_id, role = str(patient["_id"]), "patient"
+    elif doctor:
+        user_id, role = str(doctor["_id"]), "doctor"
+    else:
+        # first login via Google → ask which role to create
+        request.session["pending_google"] = {"email": email, "name": name, "sub": userinfo["sub"]}
+        return RedirectResponse("/", status_code=302)
+
+    request.session.update({"user": user_id, "role": role, "user_name": name})
+    return RedirectResponse("/", status_code=302)
+
+
 
 @app.get("/patient/register", response_class=HTMLResponse)
 async def get_patient_register(request: Request):
@@ -152,12 +212,18 @@ async def post_patient_login(
 
     return RedirectResponse("/", status_code=302)
 
+def require_login(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/?error=login_required", status_code=302)
+    return True
+
 @app.get("/patient/dashboard", response_class=HTMLResponse)
 async def patient_dashboard(
     request: Request,
     action: str = None,
     date: str = None,
-    slot: str = None
+    slot: str = None,
+    ok: bool = Depends(require_login)
 ):
     patient_id = request.session.get("user")
     if not patient_id:
