@@ -9,19 +9,13 @@ from passlib.context import CryptContext
 from pymongo import MongoClient
 from bson import ObjectId
 from datetime import datetime
-from dotenv import load_dotenv
-import os
-from auth import OAuth
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+import os
 from authlib.integrations.starlette_client import OAuth
-
-
-#app = FastAPI()
-#app.add_middleware(SessionMiddleware, secret_key="your-very-secret-key")
-
-# MongoDB Setup
+from dotenv import load_dotenv
 
 load_dotenv()
+
 app = FastAPI()
 
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "dev-secret"))
@@ -35,6 +29,18 @@ oauth.register(
     client_kwargs={"scope": "openid email profile"},
 )
 
+# --- Admin Auth Helpers ---
+from functools import wraps
+
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+
+def require_admin(request: Request):
+    if request.session.get("admin") != True:
+        return RedirectResponse("/admin/login?next=/admin/dashboard", status_code=302)
+    return True
+
+
 #Implementing o-auth2 for security
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
 @app.post("/token")
@@ -46,20 +52,79 @@ async def token(form_data: OAuth2PasswordRequestForm = Depends()):
 
 mongo_uri = os.getenv('MONGO_URI')
 client = MongoClient(mongo_uri)
-db = client["ApoointmentBooking"]  # Replace with actual DB name
+db = client["ApoointmentBooking"]  
 
-
-#conn = MongoClient(os.getenv("mongodb+srv://apoorvmk457:apoorv.m.k@apoorv.bicllhf.mongodb.net/"))
-#db = conn["ApoointmentBooking"]
-#conn = MongoClient("mongodb+srv://apoorvmk457:apoorv.m.k@apoorv.bicllhf.mongodb.net/")
-#db = conn["ApoointmentBooking"]
 patient_collection = db["Patients"]
 doctor_collection = db["Doctors"]
 
+# One-time migration: set status for existing doctors without it
+doctor_collection.update_many(
+    {"status": {"$exists": False}},
+    {"$set": {"status": "pending", "is_approved": False, "approved_at": None}}
+)
 
 # Templates
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+#Google OAuth2 
+@app.get("/login/google")
+async def login_google(request: Request, role: str = None):
+    if role:
+        request.session["oauth_role"] = role  # remember that this came from the doctor page
+    redirect_uri = os.getenv("OAUTH_REDIRECT_URI")
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+
+@app.get("/auth/google/callback")
+async def auth_google_callback(request: Request):
+    token = await oauth.google.authorize_access_token(request)
+    userinfo = token.get("userinfo") or await oauth.google.parse_id_token(request, token)
+    email = userinfo["email"]
+    name = userinfo.get("name") or userinfo.get("given_name") or "User"
+
+    patient = db["Patients"].find_one({"email": email})
+    doctor  = db["Doctors"].find_one({"email": email})
+
+    if patient:
+        request.session.update({"user": str(patient["_id"]), "role": "patient",
+                                "user_name": patient.get("full_name") or name})
+        return RedirectResponse("/", status_code=302)
+
+    if doctor:
+        status_val = doctor.get("status", "pending")
+        if status_val != "approved":
+            request.session["flash_error"] = ("Your doctor account is pending admin approval."
+                                              if status_val == "pending" else
+                                              "Your doctor account was denied by admin.")
+            return RedirectResponse("/doctor/login", status_code=302)
+        request.session.update({"user": str(doctor["_id"]), "role": "doctor",
+                                "user_name": doctor.get("full_name") or name})
+        return RedirectResponse("/", status_code=302)
+
+    # NEW: first-time Google login; came from doctor page → create a request
+    role_hint = request.session.pop("oauth_role", None)
+    if role_hint == "doctor":
+        doctor_collection.insert_one({
+            "full_name": name,
+            "email": email,
+            "specialization": "",
+            "clinic_id": None,
+            "password": None,     # Google login
+            "status": "pending",
+            "is_approved": False,
+            "approved_at": None
+        })
+    request.session["flash_error"] = "Your doctor account is pending admin approval."
+    return RedirectResponse("/doctor/login", status_code=302)
+
+
+    # Otherwise send home/role selection
+    request.session["pending_google"] = {"email": email, "name": name, "sub": userinfo.get("sub")}
+    return RedirectResponse("/", status_code=302)
+
+
 
 # Homepage with Role Selection
 @app.get("/", response_class=HTMLResponse)
@@ -68,13 +133,24 @@ async def home(request: Request):
     role = request.session.get("role")
     user_name = None
 
-    if user_id:
-        if role == "patient":
-            user = db["Patients"].find_one({"_id": ObjectId(user_id)})
-            user_name = user["full_name"] if user else None
-        elif role == "doctor":
-            doctor = db["Doctors"].find_one({"_id": ObjectId(user_id)})
-            user_name = doctor["full_name"] if doctor else None
+    # if user_id:
+    #     if role == "patient":
+    #         user = db["Patients"].find_one({"_id": ObjectId(user_id)})
+    #         user_name = user["full_name"] if user else None
+    #     elif role == "doctor":
+    #         doctor = db["Doctors"].find_one({"_id": ObjectId(user_id)})
+    #         user_name = doctor["full_name"] if doctor else None
+    
+    if not user_name and user_id and role:
+        try:
+            if role == "patient":
+                user = db["Patients"].find_one({"_id": ObjectId(user_id)})
+                user_name = user.get("full_name") if user else None
+            elif role == "doctor":
+                doc = db["Doctors"].find_one({"_id": ObjectId(user_id)})
+                user_name = doc.get("full_name") if doc else None
+        except Exception:
+            pass  # keep whatever we had
 
     return templates.TemplateResponse("index.html", {
         "request": request,
@@ -203,10 +279,14 @@ async def post_patient_login(
 
     return RedirectResponse("/", status_code=302)
 
+
+
 def require_login(request: Request):
     if not request.session.get("user"):
         return RedirectResponse("/?error=login_required", status_code=302)
     return True
+
+
 
 @app.get("/patient/dashboard", response_class=HTMLResponse)
 async def patient_dashboard(
@@ -241,7 +321,7 @@ async def patient_dashboard(
     })
 
 
-# Logout
+
 @app.get("/doctor/register", response_class=HTMLResponse)
 async def get_doctor_register(request: Request):
     clinics = list(db["Clinics"].find({}))
@@ -262,6 +342,7 @@ async def post_doctor_register(
     password: str = Form(...)
 ):
     clinic_obj_id = ObjectId(clinic)
+    doctor = doctor_collection.find_one({"email": email})
 
     # Check if doctor already exists based on name + specialization + clinic
     existing_doctor = doctor_collection.find_one({
@@ -270,19 +351,19 @@ async def post_doctor_register(
         "clinic_id": clinic_obj_id
     })
 
+    # in POST /doctor/register
     if existing_doctor:
-        # Update email and password
         doctor_collection.update_one(
             {"_id": existing_doctor["_id"]},
-            {
-                "$set": {
-                    "email": email,
-                    "password": bcrypt.hash(password)
-                }
-            }
+            {"$set": {
+                "email": email,
+                "password": bcrypt.hash(password),
+                "status": existing_doctor.get("status", "pending"),
+                "is_approved": existing_doctor.get("is_approved", False),
+                "approved_at": existing_doctor.get("approved_at", None),
+            }}
         )
     else:
-        # Insert new doctor
         doctor_collection.insert_one({
             "full_name": full_name,
             "email": email,
@@ -290,6 +371,11 @@ async def post_doctor_register(
             "clinic_id": clinic_obj_id,
             "password": bcrypt.hash(password)
         })
+    status_val = doctor.get("status","pending")
+    if status_val != "approved":
+        msg = "Your account is pending approval by admin." if status_val=="pending" else "Your account was denied by admin."
+        return templates.TemplateResponse("doctor/login.html", {"request": request, "error": msg})
+
 
     return RedirectResponse("/doctor/login", status_code=status.HTTP_302_FOUND)
 
@@ -301,26 +387,35 @@ async def get_doctor_login(request: Request):
 
 
 @app.post("/doctor/login", response_class=HTMLResponse)
-async def post_doctor_login(
-    request: Request,
-    email: str = Form(...),
-    password: str = Form(...)
-):
+async def post_doctor_login(request: Request, email: str = Form(...), password: str = Form(...)):
     doctor = doctor_collection.find_one({"email": email})
-    if not doctor or not bcrypt.verify(password, doctor["password"]):
+    if not doctor:
+        return templates.TemplateResponse("doctor/login.html", {"request": request, "error": "No such account"})
+
+    # If the doctor registered via Google, password is None
+    if doctor.get("password") is None or not bcrypt.verify(password, doctor["password"]):
         return templates.TemplateResponse("doctor/login.html", {"request": request, "error": "Invalid credentials"})
+    
+    
+    status_val = doctor.get("status", "pending")
+    if status_val != "approved":
+        msg = "Your account is pending approval by admin." if status_val == "pending" else "Your account has been denied by admin."
+        return templates.TemplateResponse("doctor/login.html", {"request": request, "error": msg})
 
-    request.session["user"] = str(doctor["_id"])
-    request.session["role"] = "doctor"
-    request.session["user_name"] = doctor["full_name"]
+    if doctor.get("status", "pending") != "approved":
+        msg = "Your account is pending approval by admin." if doctor.get("status") == "pending" else "Your account was denied by admin."
+        return templates.TemplateResponse("doctor/login.html", {"request": request, "error": msg})
 
+    request.session.update({"user": str(doctor["_id"]), "role": "doctor", "user_name": doctor.get("full_name")})
     return RedirectResponse("/", status_code=302)
+
 
 
 @app.get("/doctor/dashboard", response_class=HTMLResponse)
 async def doctor_dashboard(request: Request):
     doctor_id = request.session.get("user")
-    if not doctor_id:
+    role = request.session.get("role")
+    if not doctor_id or role != "doctor":
         return RedirectResponse("/doctor/login", status_code=302)
 
     try:
@@ -346,12 +441,140 @@ async def doctor_dashboard(request: Request):
         })
 
     doctor = db["Doctors"].find_one({"_id": doctor_obj_id})
+    if not doctor or doctor.get("status") != "approved":
+        return RedirectResponse("/doctor/login", status_code=302)
 
     return templates.TemplateResponse("doctor/dashboard.html", {
         "request": request,
         "doctor": doctor,
         "patients": patient_data
     })
+    
+# ----------------- Admin Auth & Dashboard -----------------
+
+@app.get("/admin/login", response_class=HTMLResponse)
+async def admin_login_page(request: Request, next: str = "/admin/dashboard"):
+    err = request.query_params.get("error")
+    html = f"""
+    <!doctype html><html><head>
+      <title>Admin Login</title>
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    </head><body class="p-4" style="font-family:Segoe UI;" >
+      <div class="container" style="max-width:420px;">
+        <h3 class="mb-3">Admin Login</h3>
+        {'<div class="alert alert-danger">'+err+'</div>' if err else ''}
+        <form method="post" action="/admin/login" class="card card-body">
+          <input type="hidden" name="next" value="{next}">
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input name="email" type="email" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Password</label>
+            <input name="password" type="password" class="form-control" required>
+          </div>
+          <button class="btn btn-primary w-100">Login</button>
+        </form>
+      </div>
+    </body></html>
+    """
+    return HTMLResponse(html)
+
+@app.post("/admin/login")
+async def admin_login(request: Request, email: str = Form(...), password: str = Form(...), next: str = Form("/admin/dashboard")):
+    if email.strip().lower() != ADMIN_EMAIL.strip().lower() or password != ADMIN_PASSWORD:
+        return RedirectResponse("/admin/login?error=Invalid+credentials", status_code=302)
+    request.session["admin"] = True
+    return RedirectResponse(next or "/admin/dashboard", status_code=302)
+
+@app.get("/admin/logout")
+async def admin_logout(request: Request):
+    request.session.pop("admin", None)
+    return RedirectResponse("/", status_code=302)
+
+@app.get("/admin/dashboard", response_class=HTMLResponse)
+async def admin_dashboard(request: Request):
+    guard = require_admin(request)
+    if guard is not True:
+        return guard
+
+    pending  = list(doctor_collection.find({"$or": [{"status": "pending"}, {"status": {"$exists": False}}]}))
+    approved = list(doctor_collection.find({"status": "approved"}))
+    denied   = list(doctor_collection.find({"status": "denied"}))
+
+
+    def tbl(title, docs):
+        rows = "".join(f"""
+        <tr>
+          <td>{d.get('full_name','')}</td>
+          <td>{d.get('email','')}</td>
+          <td>{d.get('specialization','')}</td>
+          <td>
+            <form method="post" action="/admin/doctor/{str(d['_id'])}/approve" class="d-inline">
+              <button class="btn btn-sm btn-success">Approve</button>
+            </form>
+            <form method="post" action="/admin/doctor/{str(d['_id'])}/deny" class="d-inline ms-2">
+              <button class="btn btn-sm btn-outline-danger">Deny</button>
+            </form>
+          </td>
+        </tr>""" for d in docs)
+        if not rows:
+            rows = '<tr><td colspan="4" class="text-center text-muted">None</td></tr>'
+        return f"""
+        <h5 class="mt-4">{title} <span class="badge bg-secondary">{len(docs)}</span></h5>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead><tr><th>Name</th><th>Email</th><th>Specialization</th><th>Actions</th></tr></thead>
+            <tbody>{rows}</tbody>
+          </table>
+        </div>
+        """
+
+    html = f"""
+    <!doctype html><html><head>
+      <title>Admin Dashboard</title>
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    </head><body class="p-4" style=
+    "font-family:Segoe UI";
+    "background-image: url('/static/images/bg.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;">
+      <div class="container">
+        <div class="d-flex justify-content-between align-items-center">
+          <h3>Admin Dashboard</h3>
+          <a class="btn btn-outline-secondary" href="/admin/logout">Logout</a>
+        </div>
+        {tbl("Pending Doctors", pending)}
+        {tbl("Approved Doctors", approved)}
+        {tbl("Denied Doctors", denied)}
+      </div>
+    </body></html>
+    """
+    return HTMLResponse(html)
+
+@app.post("/admin/doctor/{doctor_id}/approve")
+async def admin_approve_doctor(request: Request, doctor_id: str):
+    guard = require_admin(request)
+    if guard is not True:
+        return guard
+    doctor_collection.update_one(
+        {"_id": ObjectId(doctor_id)},
+        {"$set": {"status": "approved", "is_approved": True, "approved_at": datetime.utcnow()}}
+    )
+    return RedirectResponse("/admin/dashboard", status_code=302)
+
+@app.post("/admin/doctor/{doctor_id}/deny")
+async def admin_deny_doctor(request: Request, doctor_id: str):
+    guard = require_admin(request)
+    if guard is not True:
+        return guard
+    doctor_collection.update_one(
+        {"_id": ObjectId(doctor_id)},
+        {"$set": {"status": "denied", "is_approved": False, "approved_at": None}}
+    )
+    return RedirectResponse("/admin/dashboard", status_code=302)
+
     
 @app.get("/logout")
 async def logout(request: Request):
@@ -809,21 +1032,3 @@ async def delete_appointment(request: Request, appointment_id: str):
     if role == "doctor":
         return RedirectResponse("/doctor/dashboard", status_code=302)
     return RedirectResponse("/patient/dashboard", status_code=302)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
