@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse
+from starlette.datastructures import URL
 from pathlib import Path
 from passlib.hash import bcrypt
 from passlib.context import CryptContext
@@ -17,6 +18,7 @@ from authlib.integrations.starlette_client import OAuth
 from dotenv import load_dotenv
 import logging
 import sys
+
 
 # Configure root logger
 logging.basicConfig(
@@ -59,10 +61,28 @@ from functools import wraps
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
+def _redirect_uri(request: Request) -> str:
+    # Build from your mounted route name
+    uri = request.url_for("auth_google_callback")
+    # If you’re behind a proxy and still see http, upgrade to https in prod
+    if os.getenv("ENV", "prod") != "local" and uri.startswith("http://"):
+        uri = uri.replace("http://", "https://", 1)
+    # Allow explicit override via env if you really need it
+    return os.getenv("OAUTH_REDIRECT_URI", uri)
+
+
 def require_admin(request: Request):
     if request.session.get("admin") != True:
         return RedirectResponse("/admin/login?next=/admin/dashboard", status_code=302)
     return True
+
+def _redirect_uri(request: Request) -> str:
+    url: URL = request.url_for("auth_google_callback")  # this returns a URL object
+    # If you're in prod and it came out http, upgrade it to https
+    if os.getenv("ENV", "prod") != "local" and url.scheme == "http":
+        url = url.replace(scheme="https")
+    # Allow explicit override but otherwise use the computed value
+    return os.getenv("OAUTH_REDIRECT_URI") or str(url)
 
 # MongoDB connection
 mongo_uri = os.getenv('MONGO_URI')
@@ -79,7 +99,7 @@ doctor_collection.update_many(
 )
 
 # Templates
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.abspath(_file_))
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
@@ -88,102 +108,95 @@ app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), na
 async def login_google(request: Request, role: str = Query(None)):
     if role:
         request.session["oauth_role"] = role
-    
-    # Use consistent redirect URI
-    redirect_uri = "https://ieee-hackathon-12.onrender.com/auth/google/callback"
-    
+
+    redirect_uri = _redirect_uri(request)
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
     try:
         return await oauth.google.authorize_redirect(request, redirect_uri)
     except Exception as e:
-        logger.error(f"OAuth redirect failed: {str(e)}")
-        return RedirectResponse(url="/", status_code=302)
+        logger.error(f"OAuth redirect failed: {e}")
+        return RedirectResponse("/", status_code=302)
+
 
 # FIXED: Single Google OAuth callback route
-@app.get("/auth/google/callback")
+@app.get("/auth/google/callback", name="auth_google_callback")
 async def auth_google_callback(request: Request):
     try:
-        # Get the token from Google
         token = await oauth.google.authorize_access_token(request)
-        logger.info(f"OAuth token received: {bool(token)}")
-        
-        # Get user info from Google
         resp = await oauth.google.get("userinfo", token=token)
         userinfo = resp.json()
-        logger.info(f"Google OAuth userinfo: {userinfo}")
-        
+
         email = userinfo.get("email")
         name = userinfo.get("name") or userinfo.get("given_name") or "User"
-        
         if not email:
-            logger.error("No email received from Google OAuth")
-            return RedirectResponse(url="/?error=oauth_failed", status_code=302)
-        
-    except OAuthError as e:
-        logger.error(f"OAuth error: {e.error} - {e.description}")
-        return RedirectResponse(url="/?error=oauth_failed", status_code=302)
-    except Exception as e:
-        logger.error(f"OAuth callback failed: {str(e)}")
-        return RedirectResponse(url="/?error=oauth_failed", status_code=302)
+            request.session["flash_error"] = "Could not get your email from Google."
+            return RedirectResponse("/", status_code=302)
 
-    # Check if user exists as patient
-    patient = db["Patients"].find_one({"email": email})
+    except OAuthError:
+        request.session["flash_error"] = "Google sign-in failed."
+        return RedirectResponse("/", status_code=302)
+    except Exception:
+        request.session["flash_error"] = "Google sign-in error."
+        return RedirectResponse("/", status_code=302)
+
+    # 1) Patient → log in + greet
+    patient = patient_collection.find_one({"email": email})
     if patient:
         request.session.update({
-            "user": str(patient["_id"]), 
+            "user": str(patient["_id"]),
             "role": "patient",
             "user_name": patient.get("full_name") or name
         })
-        logger.info(f"Patient logged in via OAuth: {email}")
-        return RedirectResponse(url="/", status_code=302)
+        return RedirectResponse("/", status_code=302)
 
-    # Check if user exists as doctor
-    doctor = db["Doctors"].find_one({"email": email})
+    # 2) Doctor
+    doctor = doctor_collection.find_one({"email": email})
     if doctor:
         status_val = doctor.get("status", "pending")
-        if status_val != "approved":
-            flash_msg = (
+        if status_val == "approved":
+            request.session.update({
+                "user": str(doctor["_id"]),
+                "role": "doctor",
+                "user_name": doctor.get("full_name") or name
+            })
+            return RedirectResponse("/", status_code=302)
+        else:
+            # greet on home but show pending/denied message
+            request.session["flash_error"] = (
                 "Your doctor account is pending admin approval."
-                if status_val == "pending" else
-                "Your doctor account was denied by admin."
+                if status_val == "pending"
+                else "Your doctor account was denied by admin."
             )
-            request.session["flash_error"] = flash_msg
-            logger.info(f"Doctor login attempt - not approved: {email}")
-            return RedirectResponse(url="/doctor/login", status_code=302)
+            request.session.update({"user_name": name, "role": "doctor_pending"})
+            return RedirectResponse("/", status_code=302)
 
-        request.session.update({
-            "user": str(doctor["_id"]), 
-            "role": "doctor",
-            "user_name": doctor.get("full_name") or name
-        })
-        logger.info(f"Doctor logged in via OAuth: {email}")
-        return RedirectResponse(url="/", status_code=302)
-
-    # New user - check if they intended to register as doctor
+    # 3) Brand-new Google user
     role_hint = request.session.pop("oauth_role", None)
     if role_hint == "doctor":
-        # Create pending doctor account
+        # create a pending doctor and greet on home
         doctor_collection.insert_one({
-            "full_name": name, 
+            "full_name": name,
             "email": email,
-            "specialization": "", 
+            "specialization": "",
             "clinic_id": None,
-            "password": None,  # OAuth user, no password
+            "password": None,          # OAuth user
             "status": "pending",
-            "is_approved": False, 
+            "is_approved": False,
             "approved_at": None
         })
         request.session["flash_error"] = "Your doctor account is pending admin approval."
-        logger.info(f"New doctor registered via OAuth (pending): {email}")
-        return RedirectResponse(url="/doctor/login", status_code=302)
+        request.session.update({"user_name": name, "role": "doctor_pending"})
+        return RedirectResponse("/", status_code=302)
 
-    # Store pending Google user info for patient registration
-    request.session["pending_google"] = {
-        "email": email, 
-        "name": name, 
-        "sub": userinfo.get("sub")
-    }
-    logger.info(f"New user from OAuth - pending registration: {email}")
-    return RedirectResponse(url="/?new_user=true", status_code=302)
+    # otherwise treat as guest; let them choose patient/doctor next
+    request.session.update({
+        "pending_google": {"email": email, "name": name, "sub": userinfo.get("sub")},
+        "user_name": name,
+        "role": "guest"
+    })
+    return RedirectResponse("/", status_code=302)
+
 
 # Homepage with Role Selection
 @app.get("/", response_class=HTMLResponse)
@@ -191,8 +204,7 @@ async def home(request: Request):
     user_id = request.session.get("user")
     role = request.session.get("role")
     user_name = request.session.get("user_name")
-    
-    # Handle flash messages
+
     flash_error = request.session.pop("flash_error", None)
     new_user = request.query_params.get("new_user")
     oauth_error = request.query_params.get("error")
@@ -202,9 +214,11 @@ async def home(request: Request):
             if role == "patient":
                 user = db["Patients"].find_one({"_id": ObjectId(user_id)})
                 user_name = user.get("full_name") if user else None
-            elif role == "doctor":
+            elif role.startswith("doctor"):  # handles 'doctor' and 'doctor_pending'
                 doc = db["Doctors"].find_one({"_id": ObjectId(user_id)})
                 user_name = doc.get("full_name") if doc else None
+            if user_name:
+                request.session["user_name"] = user_name   # 👈 persist for later
         except Exception:
             pass
 
