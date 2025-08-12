@@ -83,49 +83,69 @@ async def login_google(request: Request, role: str = None):
 
 @app.get("/auth/google/callback")
 async def auth_google_callback(request: Request):
+    # Get token from Google
     token = await oauth.google.authorize_access_token(request)
-    userinfo = token.get("userinfo") or await oauth.google.parse_id_token(request, token)
+    
+    # Try to extract user info safely
+    resp = await oauth.google.get("userinfo", token=token)
+    userinfo = resp.json()
+    
     email = userinfo["email"]
     name = userinfo.get("name") or userinfo.get("given_name") or "User"
 
+    # Check existing accounts
     patient = db["Patients"].find_one({"email": email})
     doctor  = db["Doctors"].find_one({"email": email})
 
+    # Patient login
     if patient:
-        request.session.update({"user": str(patient["_id"]), "role": "patient",
-                                "user_name": patient.get("full_name") or name})
+        request.session.update({
+            "user": str(patient["_id"]),
+            "role": "patient",
+            "user_name": patient.get("full_name") or name
+        })
         return RedirectResponse("/", status_code=302)
 
+    # Doctor login logic
     if doctor:
         status_val = doctor.get("status", "pending")
         if status_val != "approved":
-            request.session["flash_error"] = ("Your doctor account is pending admin approval."
-                                              if status_val == "pending" else
-                                              "Your doctor account was denied by admin.")
+            request.session["flash_error"] = (
+                "Your doctor account is pending admin approval." if status_val == "pending" 
+                else "Your doctor account was denied by admin."
+            )
             return RedirectResponse("/doctor/login", status_code=302)
-        request.session.update({"user": str(doctor["_id"]), "role": "doctor",
-                                "user_name": doctor.get("full_name") or name})
+
+        request.session.update({
+            "user": str(doctor["_id"]),
+            "role": "doctor",
+            "user_name": doctor.get("full_name") or name
+        })
         return RedirectResponse("/", status_code=302)
 
-    # NEW: first-time Google login; came from doctor page → create a request
+    # First-time Google login
     role_hint = request.session.pop("oauth_role", None)
+
     if role_hint == "doctor":
         doctor_collection.insert_one({
             "full_name": name,
             "email": email,
             "specialization": "",
             "clinic_id": None,
-            "password": None,     # Google login
+            "password": None,  # Google login, no password
             "status": "pending",
             "is_approved": False,
             "approved_at": None
         })
-    request.session["flash_error"] = "Your doctor account is pending admin approval."
-    return RedirectResponse("/doctor/login", status_code=302)
+        request.session["flash_error"] = "Your doctor account is pending admin approval."
+        return RedirectResponse("/doctor/login", status_code=302)
 
-
-    # Otherwise send home/role selection
-    request.session["pending_google"] = {"email": email, "name": name, "sub": userinfo.get("sub")}
+    # Otherwise new patient / undecided role
+    request.session["pending_google"] = {
+        "email": email,
+        "name": name,
+        "sub": userinfo.get("sub")
+    }
     return RedirectResponse("/", status_code=302)
 
 
