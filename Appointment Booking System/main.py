@@ -11,7 +11,6 @@ from bson import ObjectId
 from datetime import datetime
 from dotenv import load_dotenv
 import os
-from auth import OAuth
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from authlib.integrations.starlette_client import OAuth
 
@@ -123,13 +122,35 @@ async def login_user(request: Request, email: str = Form(...), password: str = F
 @app.get("/login/google")
 async def login_google(request: Request):
     # optional: add 'next' to return users back where they came from
-    redirect_uri = os.getenv("OAUTH_REDIRECT_URI")
+    redirect_uri = os.getenv("OAUTH_REDIRECT_URI") or request.url_for("auth_google_callback")
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 @app.get("/auth/google/callback")
 async def auth_google_callback(request: Request):
     token = await oauth.google.authorize_access_token(request)
-    userinfo = token.get("userinfo") or await oauth.google.parse_id_token(request, token)
+
+    userinfo = None
+    # Try to parse ID token first (should include email claim when scope includes email)
+    try:
+        userinfo = await oauth.google.parse_id_token(request, token)
+    except Exception:
+        userinfo = None
+
+    # If still missing, fetch from UserInfo endpoint using access token
+    if not userinfo or not userinfo.get("email"):
+        try:
+            resp = await oauth.google.get(
+                "https://openidconnect.googleapis.com/v1/userinfo",
+                token=token,
+            )
+            if resp and resp.status_code == 200:
+                userinfo = resp.json()
+        except Exception:
+            userinfo = userinfo or None
+
+    if not userinfo or not userinfo.get("email"):
+        raise HTTPException(status_code=400, detail="Missing Google email from callback")
+
     email = userinfo["email"]
     name = userinfo.get("name") or userinfo.get("given_name") or "User"
 
@@ -143,7 +164,7 @@ async def auth_google_callback(request: Request):
         user_id, role = str(doctor["_id"]), "doctor"
     else:
         # first login via Google → ask which role to create
-        request.session["pending_google"] = {"email": email, "name": name, "sub": userinfo["sub"]}
+        request.session["pending_google"] = {"email": email, "name": name, "sub": userinfo.get("sub")}
         return RedirectResponse("/", status_code=302)
 
     request.session.update({"user": user_id, "role": role, "user_name": name})
