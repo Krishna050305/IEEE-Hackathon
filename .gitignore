@@ -1,9 +1,5 @@
-<<<<<<< HEAD
-.env
-=======
+
 .env
 !.env.example
 
 */__pycache__
-
->>>>>>> 8f9f7d96c0923300f3576f32f08600aed73f6c81
