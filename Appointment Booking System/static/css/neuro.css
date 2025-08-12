@@ -148,6 +148,21 @@
            flex-wrap: wrap;
 
        }
+       .hero-text-content {
+    animation: fadeInLeft 1s ease-out both;
+}
+.hero-image-content {
+    animation: fadeInRight 1.2s ease-out both;
+}
+
+@keyframes fadeInLeft {
+    0% { opacity: 0; transform: translateX(-50px); }
+    100% { opacity: 1; transform: translateX(0); }
+}
+@keyframes fadeInRight {
+    0% { opacity: 0; transform: translateX(50px); }
+    100% { opacity: 1; transform: translateX(0); }
+}
 
        .top-bar-left a {
            color: #fff;
@@ -233,6 +248,22 @@
            color: #212020;
            transition: transform 0.2s ease;
        }
+       .nav-links li a {
+    position: relative;
+}
+.nav-links li a::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -5px;
+    width: 0%;
+    height: 2px;
+    background-color: #1eb8cd;
+    transition: width 0.3s ease;
+}
+.nav-links li a:hover::after {
+    width: 100%;
+}
 
 
        .dropdown-menu {
@@ -266,7 +297,15 @@
            background-color: #f1f1f1;
            color: #1eb8cd;
        }
-
+.dropdown-menu {
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+}
+.nav-links li.has-dropdown:hover .dropdown-menu {
+    opacity: 1;
+    transform: translateY(0);
+}
        /* Ensure the dropdown behaves on hover without altering button shape */
         .user-dropdown {
             position: relative;
