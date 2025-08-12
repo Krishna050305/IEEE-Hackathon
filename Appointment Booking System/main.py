@@ -95,6 +95,7 @@ async def auth_google_callback(request: Request):
     try:
         token = await oauth.google.authorize_access_token(request)
         resp = await oauth.google.get("userinfo", token=token)
+        logger.info(f"Google OAuth response: {resp.json()}")
         userinfo = resp.json()
         email = userinfo["email"]
         name = userinfo.get("name") or userinfo.get("given_name") or "User"
@@ -106,7 +107,7 @@ async def auth_google_callback(request: Request):
     except Exception as e:
         # optional: log e
         logger.error(f"OAuth callback failed: {str(e)}")
-        return RedirectResponse(url="/login?err=oauth_failed", status_code=303)
+        return RedirectResponse(url="https://ieee-hackathon-12.onrender.com", status_code=303)
     
 
     # email = userinfo["email"]
@@ -153,7 +154,6 @@ async def auth_google_callback(request: Request):
         "email": email, "name": name, "sub": userinfo.get("sub")
     }
     return RedirectResponse(url="/", status_code=303)
-
 
 
 
