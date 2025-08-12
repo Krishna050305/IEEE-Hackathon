@@ -64,7 +64,8 @@ doctor_collection.update_many(
 )
 
 # Templates
-templates = Jinja2Templates(directory="templates")
+BASE_DIR = os.path.dirname(os.path.abspath("HACKATHON\Appointment Booking System\Appointment Booking System\main.py"))
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR,"templates"))
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
@@ -342,17 +343,16 @@ async def post_doctor_register(
     password: str = Form(...)
 ):
     clinic_obj_id = ObjectId(clinic)
-    doctor = doctor_collection.find_one({"email": email})
 
-    # Check if doctor already exists based on name + specialization + clinic
+    # Is there already a doctor with this name+spec+clinic?
     existing_doctor = doctor_collection.find_one({
         "full_name": full_name,
         "specialization": specialization,
         "clinic_id": clinic_obj_id
     })
 
-    # in POST /doctor/register
     if existing_doctor:
+        # Update existing profile (keep its current approval fields if present)
         doctor_collection.update_one(
             {"_id": existing_doctor["_id"]},
             {"$set": {
@@ -364,20 +364,32 @@ async def post_doctor_register(
             }}
         )
     else:
+        # Create a new record WITH approval fields
         doctor_collection.insert_one({
             "full_name": full_name,
             "email": email,
             "specialization": specialization,
             "clinic_id": clinic_obj_id,
-            "password": bcrypt.hash(password)
+            "password": bcrypt.hash(password),
+            "status": "pending",
+            "is_approved": False,
+            "approved_at": None,
         })
-    status_val = doctor.get("status","pending")
+
+    # ✅ Fetch the fresh copy (doctor was None before insert)
+    doctor = doctor_collection.find_one({"email": email})
+
+    status_val = doctor.get("status", "pending")
     if status_val != "approved":
-        msg = "Your account is pending approval by admin." if status_val=="pending" else "Your account was denied by admin."
+        msg = (
+            "Your account is pending approval by admin."
+            if status_val == "pending"
+            else "Your account was denied by admin."
+        )
         return templates.TemplateResponse("doctor/login.html", {"request": request, "error": msg})
 
-
     return RedirectResponse("/doctor/login", status_code=status.HTTP_302_FOUND)
+
 
 
 
