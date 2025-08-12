@@ -90,6 +90,7 @@
 }
 @keyframes fadeInRight {
     0% { opacity: 0; transform: translateX(50px); }
+    100% { opacity: 1; transform: translateX(0); }
 }
        .btn {
            display: inline-block;
@@ -179,15 +180,10 @@
         .dropdown-menu li a:hover {
             background-color: #f0f0f0;
         }
-        .dropdown-menu {
-    opacity: 0;
-    transform: translateY(-10px);
-    transition: all 0.3s ease;
-}
-.nav-links li.has-dropdown:hover .dropdown-menu {
-    opacity: 1;
-    transform: translateY(0);
-}
+
+
+
+
 
        .top-bar {
            background-color: #1a2a47;
@@ -268,7 +264,22 @@
            gap: 30px;
            align-items: center;
        }
-
+.nav-links li a {
+    position: relative;
+}
+.nav-links li a::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -5px;
+    width: 0%;
+    height: 2px;
+    background-color: #1eb8cd;
+    transition: width 0.3s ease;
+}
+.nav-links li a:hover::after {
+    width: 100%;
+}
        .nav-links li {
            position: relative;
        }
@@ -291,22 +302,7 @@
            color: #212020;
            transition: transform 0.2s ease;
        }
-.nav-links li a {
-    position: relative;
-}
-.nav-links li a::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    bottom: -5px;
-    width: 0%;
-    height: 2px;
-    background-color: #1eb8cd;
-    transition: width 0.3s ease;
-}
-.nav-links li a:hover::after {
-    width: 100%;
-}
+
 
        .dropdown-menu {
            display: none;
@@ -342,6 +338,7 @@
 
        
 
+
        .nav-links li.has-dropdown:hover .dropdown-menu {
            display: block;
        }
@@ -372,6 +369,15 @@
            background-color: #1eb8cd;
            color: white;
        }
+       .dropdown-menu {
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+}
+.nav-links li.has-dropdown:hover .dropdown-menu {
+    opacity: 1;
+    transform: translateY(0);
+}
 
        .call-info {
            text-align: right;
@@ -515,31 +521,7 @@
        }
 
 
-       .bg-heartbeat {
-           top: 20%;
-           left: 45%;
-           width: 100px;
-       }
-
-       .bg-tooth {
-           bottom: 10%;
-           right: 30%;
-           width: 60px;
-       }
-
-       .bg-pulse {
-           top: 5%;
-           right: 5%;
-           width: 80px;
-       }
-
-       .bg-brain {
-           bottom: 25%;
-           left: 5%;
-           width: 70px;
-       }
-
-
+       
 
        .hero-nav-arrow {
            position: absolute;
