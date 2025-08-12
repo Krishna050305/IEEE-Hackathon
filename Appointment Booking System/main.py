@@ -64,7 +64,7 @@ doctor_collection.update_many(
 )
 
 # Templates
-BASE_DIR = os.path.dirname(os.path.abspath("HACKATHON\Appointment Booking System\Appointment Booking System\main.py"))
+BASE_DIR = os.path.dirname(os.path.abspath(".\Appointment Booking System\main.py"))
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR,"templates"))
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
