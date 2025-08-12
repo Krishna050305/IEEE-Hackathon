@@ -410,6 +410,22 @@ p {
     color: #141313;
     margin-bottom: 30px;
 }
+.hero-text-content {
+    animation: fadeInLeft 1s ease-out both;
+}
+.hero-image-content {
+    animation: fadeInRight 1.2s ease-out both;
+}
+
+@keyframes fadeInLeft {
+    0% { opacity: 0; transform: translateX(-50px); }
+    100% { opacity: 1; transform: translateX(0); }
+}
+@keyframes fadeInRight {
+    0% { opacity: 0; transform: translateX(50px); }
+    100% { opacity: 1; transform: translateX(0); }
+}
+
 
 .btn-more-about {
     background-color: #eff4fa;
@@ -771,6 +787,16 @@ p {
     display: block;
     margin-top: 0;
 }
+.dropdown-menu {
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+}
+.nav-links li.has-dropdown:hover .dropdown-menu {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 
 @media (max-width: 992px) {
     .top-bar-content {
@@ -827,6 +853,22 @@ p {
     .nav-utility-icons {
         display: none;
     }
+.nav-links li a {
+    position: relative;
+}
+.nav-links li a::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -5px;
+    width: 0%;
+    height: 2px;
+    background-color: #1eb8cd;
+    transition: width 0.3s ease;
+}
+.nav-links li a:hover::after {
+    width: 100%;
+}
 
     .menu-toggle {
         display: flex;
@@ -1202,4 +1244,41 @@ html:has(:target) .back-to-top {
 .back-to-top:active {
     background-color: rgba(38, 140, 177, 0.9);
     transform: translateY(2px);
+}
+.back-to-top {
+    transform: translateY(20px);
+}
+.back-to-top.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+.reveal {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: all 0.8s ease;
+}
+.reveal.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+.about-feature {
+    background: #fff;
+    padding: 15px;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+.about-feature:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 8px 20px rgba(30, 184, 205, 0.25);
+}
+.about-feature i {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 8px;
+    transition: color 0.3s ease;
+}
+.about-feature:hover i {
+    color: #1eb8cd;
 }
