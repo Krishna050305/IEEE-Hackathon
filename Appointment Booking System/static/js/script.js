@@ -202,3 +202,9 @@ window.addEventListener('load', () => {
         document.querySelector('.navbar').style.transform = "translateY(0)";
     }, 100);
 });
+window.addEventListener('scroll', () => {
+    document.querySelectorAll('.hero-floating-icon').forEach((icon, idx) => {
+        let speed = (idx + 1) * 0.2;
+        icon.style.transform = `translateY(${window.scrollY * speed}px)`;
+    });
+});
