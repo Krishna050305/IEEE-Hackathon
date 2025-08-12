@@ -15,6 +15,17 @@ from authlib.integrations.starlette_client import OAuthError
 import os
 from authlib.integrations.starlette_client import OAuth
 from dotenv import load_dotenv
+import logging
+import sys
+
+# Configure root logger
+logging.basicConfig(
+    level=logging.INFO,  # Change to INFO in production
+    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+    stream=sys.stdout
+)
+
+logger = logging.getLogger("appointment_app")
 
 load_dotenv()
 
@@ -65,7 +76,7 @@ doctor_collection.update_many(
 )
 
 # Templates
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.abspath(_file_))
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
@@ -91,9 +102,12 @@ async def auth_google_callback(request: Request):
     except OAuthError as e:
         # See exactly what failed
         msg = f"{e.error}:{e.description}"
+        logger.error(f"OAuth error: {msg}")
     except Exception as e:
         # optional: log e
+        logger.error(f"OAuth callback failed: {str(e)}")
         return RedirectResponse(url="/login?err=oauth_failed", status_code=303)
+    
 
     # email = userinfo["email"]
     # name = userinfo.get("name") or userinfo.get("given_name") or "User"
