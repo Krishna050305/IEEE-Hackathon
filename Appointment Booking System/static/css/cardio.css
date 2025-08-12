@@ -522,31 +522,7 @@
        }
 
 
-       .bg-heartbeat {
-           top: 20%;
-           left: 45%;
-           width: 100px;
-       }
-
-       .bg-tooth {
-           bottom: 10%;
-           right: 30%;
-           width: 60px;
-       }
-
-       .bg-pulse {
-           top: 5%;
-           right: 5%;
-           width: 80px;
-       }
-
-       .bg-brain {
-           bottom: 25%;
-           left: 5%;
-           width: 70px;
-       }
-
-
+       
 
        .hero-nav-arrow {
            position: absolute;
