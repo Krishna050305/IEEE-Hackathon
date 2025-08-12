@@ -103,6 +103,7 @@ async def login_google(request: Request, role: str = Query(None)):
 async def auth_google_callback(request: Request):
     try:
         # Get the token from Google
+        logger.info(request)
         token = await oauth.google.authorize_access_token(request)
         logger.info(f"OAuth token received: {bool(token)}")
         
