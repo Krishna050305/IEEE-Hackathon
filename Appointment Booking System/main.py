@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 import logging
 import sys
 
+
 # Configure root logger
 logging.basicConfig(
     level=logging.INFO,
@@ -59,6 +60,16 @@ from functools import wraps
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
+def _redirect_uri(request: Request) -> str:
+    # Build from your mounted route name
+    uri = request.url_for("auth_google_callback")
+    # If you’re behind a proxy and still see http, upgrade to https in prod
+    if os.getenv("ENV", "prod") != "local" and uri.startswith("http://"):
+        uri = uri.replace("http://", "https://", 1)
+    # Allow explicit override via env if you really need it
+    return os.getenv("OAUTH_REDIRECT_URI", uri)
+
+
 def require_admin(request: Request):
     if request.session.get("admin") != True:
         return RedirectResponse("/admin/login?next=/admin/dashboard", status_code=302)
@@ -88,22 +99,22 @@ app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), na
 async def login_google(request: Request, role: str = Query(None)):
     if role:
         request.session["oauth_role"] = role
-    
-    # Use consistent redirect URI
-    redirect_uri = "https://ieee-hackathon-12.onrender.com/auth/google/callback"
-    
+
+    redirect_uri = _redirect_uri(request)
+    logger.info(f"Using Google OAuth redirect_uri={redirect_uri!r}")  # sanity log
+
     try:
         return await oauth.google.authorize_redirect(request, redirect_uri)
     except Exception as e:
-        logger.error(f"OAuth redirect failed: {str(e)}")
-        return RedirectResponse(url="/", status_code=302)
+        logger.error(f"OAuth redirect failed: {e}")
+        return RedirectResponse("/", status_code=302)
+
 
 # FIXED: Single Google OAuth callback route
-@app.get("/auth/google/callback")
+@app.get("/auth/google/callback", name="auth_google_callback")
 async def auth_google_callback(request: Request):
     try:
         # Get the token from Google
-        logger.info(request)
         token = await oauth.google.authorize_access_token(request)
         logger.info(f"OAuth token received: {bool(token)}")
         
