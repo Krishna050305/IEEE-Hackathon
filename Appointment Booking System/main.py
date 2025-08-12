@@ -9,26 +9,17 @@ from passlib.context import CryptContext
 from pymongo import MongoClient
 from bson import ObjectId
 from datetime import datetime
-
 from dotenv import load_dotenv
 import os
-
+from auth import OAuth
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-import os
-
-from dotenv import load_dotenv
-
-
-load_dotenv()
-
-
+from authlib.integrations.starlette_client import OAuth
 
 
 #app = FastAPI()
 #app.add_middleware(SessionMiddleware, secret_key="your-very-secret-key")
 
 # MongoDB Setup
-
 
 load_dotenv()
 app = FastAPI()
@@ -62,8 +53,8 @@ db = client["ApoointmentBooking"]  # Replace with actual DB name
 #db = conn["ApoointmentBooking"]
 #conn = MongoClient("mongodb+srv://apoorvmk457:apoorv.m.k@apoorv.bicllhf.mongodb.net/")
 #db = conn["ApoointmentBooking"]
-#patient_collection = db["Patients"]
-#doctor_collection = db["Doctors"]
+patient_collection = db["Patients"]
+doctor_collection = db["Doctors"]
 
 
 # Templates
