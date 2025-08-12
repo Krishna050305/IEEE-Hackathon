@@ -20,7 +20,7 @@ import sys
 
 # Configure root logger
 logging.basicConfig(
-    level=logging.INFO,  # Change to INFO in production
+    level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
     stream=sys.stdout
 )
@@ -33,8 +33,9 @@ app = FastAPI()
 
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "dev-secret"))
 
-#Implementing o-auth2 for security
+# OAuth2 configuration
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
+
 @app.post("/token")
 async def token(form_data: OAuth2PasswordRequestForm = Depends()):
     user = db["Users"].find_one({"email": form_data.username})
@@ -42,6 +43,7 @@ async def token(form_data: OAuth2PasswordRequestForm = Depends()):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     return {"access_token": str(user["_id"]), "token_type": "bearer"}
 
+# OAuth configuration - FIXED
 oauth = OAuth()
 oauth.register(
     name="google",
@@ -51,7 +53,7 @@ oauth.register(
     client_kwargs={"scope": "openid email profile"},
 )
 
-# --- Admin Auth Helpers ---
+# Admin Auth Helpers
 from functools import wraps
 
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
@@ -62,6 +64,7 @@ def require_admin(request: Request):
         return RedirectResponse("/admin/login?next=/admin/dashboard", status_code=302)
     return True
 
+# MongoDB connection
 mongo_uri = os.getenv('MONGO_URI')
 client = MongoClient(mongo_uri)
 db = client["ApoointmentBooking"]  
@@ -80,98 +83,120 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
-
-#Google OAuth2 
+# FIXED: Single Google OAuth login route
 @app.get("/login/google")
-async def login_google(request: Request, role: str = None):
+async def login_google(request: Request, role: str = Query(None)):
     if role:
-        request.session["oauth_role"] = role  # remember that this came from the doctor page
+        request.session["oauth_role"] = role
+    
+    # Use consistent redirect URI
     redirect_uri = "https://ieee-hackathon-12.onrender.com/auth/google/callback"
-    return await oauth.google.authorize_redirect(request, redirect_uri)
+    
+    try:
+        return await oauth.google.authorize_redirect(request, redirect_uri)
+    except Exception as e:
+        logger.error(f"OAuth redirect failed: {str(e)}")
+        return RedirectResponse(url="/", status_code=302)
 
-
+# FIXED: Single Google OAuth callback route
 @app.get("/auth/google/callback")
 async def auth_google_callback(request: Request):
     try:
+        # Get the token from Google
         token = await oauth.google.authorize_access_token(request)
+        logger.info(f"OAuth token received: {bool(token)}")
+        
+        # Get user info from Google
         resp = await oauth.google.get("userinfo", token=token)
-        logger.info(f"Google OAuth response: {resp.json()}")
         userinfo = resp.json()
-        email = userinfo["email"]
+        logger.info(f"Google OAuth userinfo: {userinfo}")
+        
+        email = userinfo.get("email")
         name = userinfo.get("name") or userinfo.get("given_name") or "User"
         
+        if not email:
+            logger.error("No email received from Google OAuth")
+            return RedirectResponse(url="/?error=oauth_failed", status_code=302)
+        
     except OAuthError as e:
-        # See exactly what failed
-        msg = f"{e.error}:{e.description}"
-        logger.error(f"OAuth error: {msg}")
+        logger.error(f"OAuth error: {e.error} - {e.description}")
+        return RedirectResponse(url="/?error=oauth_failed", status_code=302)
     except Exception as e:
-        # optional: log e
         logger.error(f"OAuth callback failed: {str(e)}")
-        return RedirectResponse(url="https://ieee-hackathon-12.onrender.com", status_code=303)
-    
+        return RedirectResponse(url="/?error=oauth_failed", status_code=302)
 
-    # email = userinfo["email"]
-    # name = userinfo.get("name") or userinfo.get("given_name") or "User"
-
+    # Check if user exists as patient
     patient = db["Patients"].find_one({"email": email})
-    doctor  = db["Doctors"].find_one({"email": email})
-
     if patient:
         request.session.update({
-            "user": str(patient["_id"]), "role": "patient",
+            "user": str(patient["_id"]), 
+            "role": "patient",
             "user_name": patient.get("full_name") or name
         })
-        return RedirectResponse(url="/", status_code=303)
+        logger.info(f"Patient logged in via OAuth: {email}")
+        return RedirectResponse(url="/", status_code=302)
 
+    # Check if user exists as doctor
+    doctor = db["Doctors"].find_one({"email": email})
     if doctor:
         status_val = doctor.get("status", "pending")
         if status_val != "approved":
-            request.session["flash_error"] = (
+            flash_msg = (
                 "Your doctor account is pending admin approval."
                 if status_val == "pending" else
                 "Your doctor account was denied by admin."
             )
-            return RedirectResponse(url="/doctor/login", status_code=303)
+            request.session["flash_error"] = flash_msg
+            logger.info(f"Doctor login attempt - not approved: {email}")
+            return RedirectResponse(url="/doctor/login", status_code=302)
 
         request.session.update({
-            "user": str(doctor["_id"]), "role": "doctor",
+            "user": str(doctor["_id"]), 
+            "role": "doctor",
             "user_name": doctor.get("full_name") or name
         })
-        return RedirectResponse(url="/", status_code=303)
+        logger.info(f"Doctor logged in via OAuth: {email}")
+        return RedirectResponse(url="/", status_code=302)
 
+    # New user - check if they intended to register as doctor
     role_hint = request.session.pop("oauth_role", None)
     if role_hint == "doctor":
+        # Create pending doctor account
         doctor_collection.insert_one({
-            "full_name": name, "email": email,
-            "specialization": "", "clinic_id": None,
-            "password": None, "status": "pending",
-            "is_approved": False, "approved_at": None
+            "full_name": name, 
+            "email": email,
+            "specialization": "", 
+            "clinic_id": None,
+            "password": None,  # OAuth user, no password
+            "status": "pending",
+            "is_approved": False, 
+            "approved_at": None
         })
         request.session["flash_error"] = "Your doctor account is pending admin approval."
-        return RedirectResponse(url="/doctor/login", status_code=303)
+        logger.info(f"New doctor registered via OAuth (pending): {email}")
+        return RedirectResponse(url="/doctor/login", status_code=302)
 
+    # Store pending Google user info for patient registration
     request.session["pending_google"] = {
-        "email": email, "name": name, "sub": userinfo.get("sub")
+        "email": email, 
+        "name": name, 
+        "sub": userinfo.get("sub")
     }
-    return RedirectResponse(url="/", status_code=303)
-
-
+    logger.info(f"New user from OAuth - pending registration: {email}")
+    return RedirectResponse(url="/?new_user=true", status_code=302)
 
 # Homepage with Role Selection
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     user_id = request.session.get("user")
     role = request.session.get("role")
-    user_name = None
-
-    # if user_id:
-    #     if role == "patient":
-    #         user = db["Patients"].find_one({"_id": ObjectId(user_id)})
-    #         user_name = user["full_name"] if user else None
-    #     elif role == "doctor":
-    #         doctor = db["Doctors"].find_one({"_id": ObjectId(user_id)})
-    #         user_name = doctor["full_name"] if doctor else None
+    user_name = request.session.get("user_name")
     
+    # Handle flash messages
+    flash_error = request.session.pop("flash_error", None)
+    new_user = request.query_params.get("new_user")
+    oauth_error = request.query_params.get("error")
+
     if not user_name and user_id and role:
         try:
             if role == "patient":
@@ -181,14 +206,16 @@ async def home(request: Request):
                 doc = db["Doctors"].find_one({"_id": ObjectId(user_id)})
                 user_name = doc.get("full_name") if doc else None
         except Exception:
-            pass  # keep whatever we had
+            pass
 
     return templates.TemplateResponse("index.html", {
         "request": request,
         "user_name": user_name,
-        "role": role
+        "role": role,
+        "flash_error": flash_error,
+        "new_user": new_user,
+        "oauth_error": oauth_error
     })
-
 
 @app.get("/auth", response_class=HTMLResponse)
 async def choose_role(request: Request):
@@ -203,11 +230,6 @@ async def choose_role(request: Request):
             return RedirectResponse("/doctor/dashboard", status_code=302)
     else:
         return RedirectResponse("/", status_code=302)
-    
-
-    # If not logged in, show role selection page
-    return templates.TemplateResponse("select_role.html", {"request": request})
-
 
 @app.post("/auth", response_class=HTMLResponse)
 async def login_user(request: Request, email: str = Form(...), password: str = Form(...)):
@@ -224,45 +246,10 @@ async def login_user(request: Request, email: str = Form(...), password: str = F
         return RedirectResponse("/doctor/dashboard", status_code=302)
     else:
         return RedirectResponse("/patient/dashboard", status_code=302)
-    
-    
-#Google OAuth2 
-@app.get("/login/google")
-async def login_google(request: Request):
-    # optional: add 'next' to return users back where they came from
-    redirect_uri = os.getenv("OAUTH_REDIRECT_URI")
-    return await oauth.google.authorize_redirect(request, redirect_uri)
-
-@app.get("/auth/google/callback")
-async def auth_google_callback(request: Request):
-    token = await oauth.google.authorize_access_token(request)
-    userinfo = token.get("userinfo") or await oauth.google.parse_id_token(request, token)
-    email = userinfo["email"]
-    name = userinfo.get("name") or userinfo.get("given_name") or "User"
-
-    # Try patient first
-    patient = db["Patients"].find_one({"email": email})
-    doctor  = db["Doctors"].find_one({"email": email})
-
-    if patient:
-        user_id, role = str(patient["_id"]), "patient"
-    elif doctor:
-        user_id, role = str(doctor["_id"]), "doctor"
-    else:
-        # first login via Google → ask which role to create
-        request.session["pending_google"] = {"email": email, "name": name, "sub": userinfo["sub"]}
-        return RedirectResponse("/", status_code=302)
-
-    request.session.update({"user": user_id, "role": role, "user_name": name})
-    return RedirectResponse("/", status_code=302)
-
-
 
 @app.get("/patient/register", response_class=HTMLResponse)
 async def get_patient_register(request: Request):
     return templates.TemplateResponse("patient/register.html", {"request": request})
-
-
 
 @app.post("/patient/register", response_class=HTMLResponse)
 async def post_patient_register(
@@ -292,7 +279,11 @@ async def post_patient_register(
 
 @app.get("/patient/login", response_class=HTMLResponse)
 async def get_patient_login(request: Request):
-    return templates.TemplateResponse("patient/login.html", {"request": request})
+    flash_error = request.session.pop("flash_error", None)
+    return templates.TemplateResponse("patient/login.html", {
+        "request": request,
+        "flash_error": flash_error
+    })
 
 @app.post("/patient/login", response_class=HTMLResponse)
 async def post_patient_login(
@@ -310,14 +301,10 @@ async def post_patient_login(
 
     return RedirectResponse("/", status_code=302)
 
-
-
 def require_login(request: Request):
     if not request.session.get("user"):
         return RedirectResponse("/?error=login_required", status_code=302)
     return True
-
-
 
 @app.get("/patient/dashboard", response_class=HTMLResponse)
 async def patient_dashboard(
@@ -351,8 +338,6 @@ async def patient_dashboard(
         "slot": slot
     })
 
-
-
 @app.get("/doctor/register", response_class=HTMLResponse)
 async def get_doctor_register(request: Request):
     clinics = list(db["Clinics"].find({}))
@@ -360,8 +345,6 @@ async def get_doctor_register(request: Request):
         "request": request,
         "clinics": clinics
     })
-
-
 
 @app.post("/doctor/register", response_class=HTMLResponse)
 async def post_doctor_register(
@@ -420,13 +403,13 @@ async def post_doctor_register(
 
     return RedirectResponse("/doctor/login", status_code=status.HTTP_302_FOUND)
 
-
-
-
 @app.get("/doctor/login", response_class=HTMLResponse)
 async def get_doctor_login(request: Request):
-    return templates.TemplateResponse("doctor/login.html", {"request": request})
-
+    flash_error = request.session.pop("flash_error", None)
+    return templates.TemplateResponse("doctor/login.html", {
+        "request": request,
+        "flash_error": flash_error
+    })
 
 @app.post("/doctor/login", response_class=HTMLResponse)
 async def post_doctor_login(request: Request, email: str = Form(...), password: str = Form(...)):
@@ -438,20 +421,13 @@ async def post_doctor_login(request: Request, email: str = Form(...), password: 
     if doctor.get("password") is None or not bcrypt.verify(password, doctor["password"]):
         return templates.TemplateResponse("doctor/login.html", {"request": request, "error": "Invalid credentials"})
     
-    
     status_val = doctor.get("status", "pending")
     if status_val != "approved":
         msg = "Your account is pending approval by admin." if status_val == "pending" else "Your account has been denied by admin."
         return templates.TemplateResponse("doctor/login.html", {"request": request, "error": msg})
 
-    if doctor.get("status", "pending") != "approved":
-        msg = "Your account is pending approval by admin." if doctor.get("status") == "pending" else "Your account was denied by admin."
-        return templates.TemplateResponse("doctor/login.html", {"request": request, "error": msg})
-
     request.session.update({"user": str(doctor["_id"]), "role": "doctor", "user_name": doctor.get("full_name")})
     return RedirectResponse("/", status_code=302)
-
-
 
 @app.get("/doctor/dashboard", response_class=HTMLResponse)
 async def doctor_dashboard(request: Request):
@@ -544,7 +520,6 @@ async def admin_dashboard(request: Request):
     approved = list(doctor_collection.find({"status": "approved"}))
     denied   = list(doctor_collection.find({"status": "denied"}))
 
-
     def tbl(title, docs):
         rows = "".join(f"""
         <tr>
@@ -616,13 +591,11 @@ async def admin_deny_doctor(request: Request, doctor_id: str):
         {"$set": {"status": "denied", "is_approved": False, "approved_at": None}}
     )
     return RedirectResponse("/admin/dashboard", status_code=302)
-
     
 @app.get("/logout")
 async def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/", status_code=302)
-
 
 @app.get("/Cardiology", response_class=HTMLResponse)
 async def cardiology_page(request: Request):
@@ -655,7 +628,7 @@ async def gynecologist_page(request: Request):
     })
     
 @app.get("/Neurology", response_class=HTMLResponse)
-async def gynecologist_page(request: Request):
+async def neurology_page(request: Request):
     user_name = request.session.get("user_name")
     role = request.session.get("role")
     return templates.TemplateResponse("neurology.html", {
@@ -675,7 +648,7 @@ async def pediatric_page(request: Request):
     })
     
 @app.get("/Psychiatrist", response_class=HTMLResponse)
-async def pediatric_page(request: Request):
+async def psychiatrist_page(request: Request):
     user_name = request.session.get("user_name")
     role = request.session.get("role")
     return templates.TemplateResponse("psychiatry.html", {
@@ -754,7 +727,7 @@ async def show_specialty_page(request: Request, specialization: str, clinic_id: 
     })
 
 @app.get("/clinics/{specialization}", response_class=HTMLResponse)
-async def show_specialty_page(request: Request, specialization: str, clinic_id: str = Query(None)):
+async def show_clinics_by_specialty(request: Request, specialization: str, clinic_id: str = Query(None)):
     query = {"specialization": specialization.capitalize()}
 
     if clinic_id:
@@ -922,8 +895,6 @@ async def submit_booking(
         status_code=302
     )
 
-
-
 @app.get("/confirmation", response_class=HTMLResponse)
 async def appointment_confirmation(request: Request, slot: str, date: str, doctor_id: str):
     doctor = db["Doctors"].find_one({"_id": ObjectId(doctor_id)})
@@ -964,8 +935,6 @@ async def edit_appointment(request: Request, appointment_id: str):
         "edit": True,
         "appointment_id": appointment_id
     })
-
-
 
 @app.post("/appointment/edit/{appointment_id}")
 async def update_appointment(
@@ -1045,8 +1014,6 @@ async def update_appointment(
     if role == "doctor":
         return RedirectResponse("/doctor/dashboard", status_code=302)
     return RedirectResponse("/patient/dashboard", status_code=302)
-
-
 
 @app.get("/appointment/delete/{appointment_id}")
 async def delete_appointment(request: Request, appointment_id: str):
