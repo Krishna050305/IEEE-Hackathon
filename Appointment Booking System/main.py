@@ -4,12 +4,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse
+from pathlib import Path
 from passlib.hash import bcrypt
 from passlib.context import CryptContext
 from pymongo import MongoClient
 from bson import ObjectId
 from datetime import datetime
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from authlib.integrations.starlette_client import OAuthError
 import os
 from authlib.integrations.starlette_client import OAuth
 from dotenv import load_dotenv
@@ -19,6 +21,15 @@ load_dotenv()
 app = FastAPI()
 
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "dev-secret"))
+
+#Implementing o-auth2 for security
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
+@app.post("/token")
+async def token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = db["Users"].find_one({"email": form_data.username})
+    if not user or not bcrypt.verify(form_data.password, user["password"]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    return {"access_token": str(user["_id"]), "token_type": "bearer"}
 
 oauth = OAuth()
 oauth.register(
@@ -40,16 +51,6 @@ def require_admin(request: Request):
         return RedirectResponse("/admin/login?next=/admin/dashboard", status_code=302)
     return True
 
-
-#Implementing o-auth2 for security
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
-@app.post("/token")
-async def token(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = db["Users"].find_one({"email": form_data.username})
-    if not user or not bcrypt.verify(form_data.password, user["password"]):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    return {"access_token": str(user["_id"]), "token_type": "bearer"}
-
 mongo_uri = os.getenv('MONGO_URI')
 client = MongoClient(mongo_uri)
 db = client["ApoointmentBooking"]  
@@ -64,8 +65,9 @@ doctor_collection.update_many(
 )
 
 # Templates
-templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
 
 #Google OAuth2 
@@ -73,56 +75,71 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 async def login_google(request: Request, role: str = None):
     if role:
         request.session["oauth_role"] = role  # remember that this came from the doctor page
-    redirect_uri = os.getenv("OAUTH_REDIRECT_URI")
+    redirect_uri = "https://ieee-hackathon-12.onrender.com/auth/google/callback"
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 
 @app.get("/auth/google/callback")
 async def auth_google_callback(request: Request):
-    token = await oauth.google.authorize_access_token(request)
-    userinfo = token.get("userinfo") or await oauth.google.parse_id_token(request, token)
-    email = userinfo["email"]
-    name = userinfo.get("name") or userinfo.get("given_name") or "User"
+    try:
+        token = await oauth.google.authorize_access_token(request)
+        resp = await oauth.google.get("userinfo", token=token)
+        userinfo = resp.json()
+        email = userinfo["email"]
+        name = userinfo.get("name") or userinfo.get("given_name") or "User"
+        
+    except OAuthError as e:
+        # See exactly what failed
+        msg = f"{e.error}:{e.description}"
+    except Exception as e:
+        # optional: log e
+        return RedirectResponse(url="/login?err=oauth_failed", status_code=303)
+
+    # email = userinfo["email"]
+    # name = userinfo.get("name") or userinfo.get("given_name") or "User"
 
     patient = db["Patients"].find_one({"email": email})
     doctor  = db["Doctors"].find_one({"email": email})
 
     if patient:
-        request.session.update({"user": str(patient["_id"]), "role": "patient",
-                                "user_name": patient.get("full_name") or name})
-        return RedirectResponse("/", status_code=302)
+        request.session.update({
+            "user": str(patient["_id"]), "role": "patient",
+            "user_name": patient.get("full_name") or name
+        })
+        return RedirectResponse(url="/", status_code=303)
 
     if doctor:
         status_val = doctor.get("status", "pending")
         if status_val != "approved":
-            request.session["flash_error"] = ("Your doctor account is pending admin approval."
-                                              if status_val == "pending" else
-                                              "Your doctor account was denied by admin.")
-            return RedirectResponse("/doctor/login", status_code=302)
-        request.session.update({"user": str(doctor["_id"]), "role": "doctor",
-                                "user_name": doctor.get("full_name") or name})
-        return RedirectResponse("/", status_code=302)
+            request.session["flash_error"] = (
+                "Your doctor account is pending admin approval."
+                if status_val == "pending" else
+                "Your doctor account was denied by admin."
+            )
+            return RedirectResponse(url="/doctor/login", status_code=303)
 
-    # NEW: first-time Google login; came from doctor page → create a request
+        request.session.update({
+            "user": str(doctor["_id"]), "role": "doctor",
+            "user_name": doctor.get("full_name") or name
+        })
+        return RedirectResponse(url="/", status_code=303)
+
     role_hint = request.session.pop("oauth_role", None)
     if role_hint == "doctor":
         doctor_collection.insert_one({
-            "full_name": name,
-            "email": email,
-            "specialization": "",
-            "clinic_id": None,
-            "password": None,     # Google login
-            "status": "pending",
-            "is_approved": False,
-            "approved_at": None
+            "full_name": name, "email": email,
+            "specialization": "", "clinic_id": None,
+            "password": None, "status": "pending",
+            "is_approved": False, "approved_at": None
         })
-    request.session["flash_error"] = "Your doctor account is pending admin approval."
-    return RedirectResponse("/doctor/login", status_code=302)
+        request.session["flash_error"] = "Your doctor account is pending admin approval."
+        return RedirectResponse(url="/doctor/login", status_code=303)
 
+    request.session["pending_google"] = {
+        "email": email, "name": name, "sub": userinfo.get("sub")
+    }
+    return RedirectResponse(url="/", status_code=303)
 
-    # Otherwise send home/role selection
-    request.session["pending_google"] = {"email": email, "name": name, "sub": userinfo.get("sub")}
-    return RedirectResponse("/", status_code=302)
 
 
 
@@ -342,17 +359,16 @@ async def post_doctor_register(
     password: str = Form(...)
 ):
     clinic_obj_id = ObjectId(clinic)
-    doctor = doctor_collection.find_one({"email": email})
 
-    # Check if doctor already exists based on name + specialization + clinic
+    # Is there already a doctor with this name+spec+clinic?
     existing_doctor = doctor_collection.find_one({
         "full_name": full_name,
         "specialization": specialization,
         "clinic_id": clinic_obj_id
     })
 
-    # in POST /doctor/register
     if existing_doctor:
+        # Update existing profile (keep its current approval fields if present)
         doctor_collection.update_one(
             {"_id": existing_doctor["_id"]},
             {"$set": {
@@ -364,20 +380,32 @@ async def post_doctor_register(
             }}
         )
     else:
+        # Create a new record WITH approval fields
         doctor_collection.insert_one({
             "full_name": full_name,
             "email": email,
             "specialization": specialization,
             "clinic_id": clinic_obj_id,
-            "password": bcrypt.hash(password)
+            "password": bcrypt.hash(password),
+            "status": "pending",
+            "is_approved": False,
+            "approved_at": None,
         })
-    status_val = doctor.get("status","pending")
+
+    # ✅ Fetch the fresh copy (doctor was None before insert)
+    doctor = doctor_collection.find_one({"email": email})
+
+    status_val = doctor.get("status", "pending")
     if status_val != "approved":
-        msg = "Your account is pending approval by admin." if status_val=="pending" else "Your account was denied by admin."
+        msg = (
+            "Your account is pending approval by admin."
+            if status_val == "pending"
+            else "Your account was denied by admin."
+        )
         return templates.TemplateResponse("doctor/login.html", {"request": request, "error": msg})
 
-
     return RedirectResponse("/doctor/login", status_code=status.HTTP_302_FOUND)
+
 
 
 
