@@ -306,7 +306,15 @@
         .dropdown-menu li a:hover {
             background-color: #f0f0f0;
         }
-
+.dropdown-menu {
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+}
+.nav-links li.has-dropdown:hover .dropdown-menu {
+    opacity: 1;
+    transform: translateY(0);
+}
        .nav-links li.has-dropdown:hover .dropdown-menu {
            display: block;
        }
@@ -316,6 +324,22 @@
            transform: rotate(180deg);
 
        }
+       .nav-links li a {
+    position: relative;
+}
+.nav-links li a::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -5px;
+    width: 0%;
+    height: 2px;
+    background-color: #1eb8cd;
+    transition: width 0.3s ease;
+}
+.nav-links li a:hover::after {
+    width: 100%;
+}
 
 
        .nav-utility-icons {
@@ -428,6 +452,21 @@
            color: #141313;
            margin-bottom: 30px;
        }
+       .hero-text-content {
+    animation: fadeInLeft 1s ease-out both;
+}
+.hero-image-content {
+    animation: fadeInRight 1.2s ease-out both;
+}
+
+@keyframes fadeInLeft {
+    0% { opacity: 0; transform: translateX(-50px); }
+    100% { opacity: 1; transform: translateX(0); }
+}
+@keyframes fadeInRight {
+    0% { opacity: 0; transform: translateX(50px); }
+}
+
 
        .btn-more-about {
            background-color: #eff4fa;
