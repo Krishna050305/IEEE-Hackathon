@@ -4,12 +4,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse
+from pathlib import Path
 from passlib.hash import bcrypt
 from passlib.context import CryptContext
 from pymongo import MongoClient
 from bson import ObjectId
 from datetime import datetime
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from authlib.integrations.starlette_client import OAuthError
 import os
 from authlib.integrations.starlette_client import OAuth
 from dotenv import load_dotenv
@@ -20,17 +22,22 @@ app = FastAPI()
 
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "dev-secret"))
 
+#Implementing o-auth2 for security
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
+@app.post("/token")
+async def token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = db["Users"].find_one({"email": form_data.username})
+    if not user or not bcrypt.verify(form_data.password, user["password"]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    return {"access_token": str(user["_id"]), "token_type": "bearer"}
+
 oauth = OAuth()
 oauth.register(
     name="google",
     client_id=os.getenv("GOOGLE_CLIENT_ID"),
     client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-    access_token_url='https://accounts.google.com/o/oauth2/token',
-    authorize_url='https://accounts.google.com/o/oauth2/auth',
-    api_base_url='https://www.googleapis.com/oauth2/v1/',
     server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
     client_kwargs={"scope": "openid email profile"},
-    redirect_uri='https://ieee-hackathon-12.onrender.com/auth/google/callback'
 )
 
 # --- Admin Auth Helpers ---
@@ -43,16 +50,6 @@ def require_admin(request: Request):
     if request.session.get("admin") != True:
         return RedirectResponse("/admin/login?next=/admin/dashboard", status_code=302)
     return True
-
-
-#Implementing o-auth2 for security
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
-@app.post("/token")
-async def token(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = db["Users"].find_one({"email": form_data.username})
-    if not user or not bcrypt.verify(form_data.password, user["password"]):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    return {"access_token": str(user["_id"]), "token_type": "bearer"}
 
 mongo_uri = os.getenv('MONGO_URI')
 client = MongoClient(mongo_uri)
@@ -70,14 +67,15 @@ doctor_collection.update_many(
 # Templates
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
-app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")),name="static")
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+
 
 #Google OAuth2 
 @app.get("/login/google")
 async def login_google(request: Request, role: str = None):
     if role:
         request.session["oauth_role"] = role  # remember that this came from the doctor page
-    redirect_uri = os.getenv("OAUTH_REDIRECT_URI")
+    redirect_uri = "https://ieee-hackathon-12.onrender.com/auth/google/callback"
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 
@@ -87,12 +85,18 @@ async def auth_google_callback(request: Request):
         token = await oauth.google.authorize_access_token(request)
         resp = await oauth.google.get("userinfo", token=token)
         userinfo = resp.json()
+        email = userinfo["email"]
+        name = userinfo.get("name") or userinfo.get("given_name") or "User"
+        
+    except OAuthError as e:
+        # See exactly what failed
+        msg = f"{e.error}:{e.description}"
     except Exception as e:
         # optional: log e
         return RedirectResponse(url="/login?err=oauth_failed", status_code=303)
 
-    email = userinfo["email"]
-    name = userinfo.get("name") or userinfo.get("given_name") or "User"
+    # email = userinfo["email"]
+    # name = userinfo.get("name") or userinfo.get("given_name") or "User"
 
     patient = db["Patients"].find_one({"email": email})
     doctor  = db["Doctors"].find_one({"email": email})
@@ -135,6 +139,7 @@ async def auth_google_callback(request: Request):
         "email": email, "name": name, "sub": userinfo.get("sub")
     }
     return RedirectResponse(url="/", status_code=303)
+
 
 
 
