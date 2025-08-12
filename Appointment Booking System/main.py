@@ -9,15 +9,15 @@ from passlib.context import CryptContext
 from pymongo import MongoClient
 from bson import ObjectId
 from datetime import datetime
-<<<<<<< HEAD
+
 from dotenv import load_dotenv
 import os
-=======
+
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import os
-from authlib.integrations.starlette_client import OAuth
+
 from dotenv import load_dotenv
->>>>>>> 8f9f7d96c0923300f3576f32f08600aed73f6c81
+
 
 load_dotenv()
 
