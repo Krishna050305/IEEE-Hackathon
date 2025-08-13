@@ -54,16 +54,16 @@
                     </div>
                    {% if user_name %}
                 <div class="dropdown user-dropdown">
-                    <a href="#" class="btn btn-primary dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    Hello, {{ user_name }}
-                    </a>
+                    <span href="#" class="btn btn-primary dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        Hello, {{ user_name }}
+                    </span>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                    {% if role == "doctor" %}
-                        <li><a class="dropdown-item" href="/doctor/dashboard">Dashboard</a></li>
-                    {% elif role == "patient" %}
-                        <li><a class="dropdown-item" href="/patient/dashboard">Dashboard</a></li>
-                    {% endif %}
-                    <li><a class="dropdown-item" href="/logout">Logout</a></li>
+                        {% if role == "doctor" %}
+                            <li><a class="dropdown-item" href="/doctor/dashboard">Dashboard</a></li>
+                        {% elif role == "patient" %}
+                            <li><a class="dropdown-item" href="/patient/dashboard">Dashboard</a></li>
+                        {% endif %}
+                        <li><a class="dropdown-item" href="/logout">Logout</a></li>
                     </ul>
                 </div>
                 {% else %}
