@@ -635,6 +635,8 @@ p {
 
 
 
+
+
 .quick-actions-section {
     max-width: 1200px;
     margin: -60px auto 80px auto;
@@ -864,9 +866,16 @@ p {
         font-size: 1.1em;
     }
 
+    @media (max-width: 992px) {
     .nav-utility-icons {
-        display: none;
+        display: flex !important; /* Force visible */
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 10px;
+        align-items: flex-start; /* Keep left-aligned on mobile */
     }
+}
+
 .nav-links li a {
     position: relative;
 }

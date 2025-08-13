@@ -830,8 +830,12 @@
            }
 
            .nav-utility-icons {
-               display: none;
-           }
+                display: flex !important; /* Force visible */
+                flex-direction: column;
+                gap: 10px;
+                margin-top: 10px;
+                align-items: flex-start; /* Keep left-aligned on mobile */
+            }
 
            .menu-toggle {
                display: flex;
