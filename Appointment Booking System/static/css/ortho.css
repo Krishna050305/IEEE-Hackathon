@@ -304,6 +304,16 @@
        }
 
 
+       /* Show dropdown on hover */
+        .navbar .dropdown:hover .dropdown-menu {
+            display: block;
+            margin-top: 0; /* Align neatly below the button */
+        }
+
+        .navbar .dropdown .dropdown-menu {
+            display: none;
+        }
+
        .dropdown-menu {
            display: none;
            position: absolute;

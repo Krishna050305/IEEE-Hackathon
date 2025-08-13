@@ -16,6 +16,16 @@
     border-radius: 50%;
 }
 
+/* Show dropdown on hover */
+.navbar .dropdown:hover .dropdown-menu {
+    display: block;
+    margin-top: 0; /* Align neatly below the button */
+}
+
+.navbar .dropdown .dropdown-menu {
+    display: none;
+}
+
 .nav-links,
 .nav-utility-icons {
     display: flex;

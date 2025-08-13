@@ -369,15 +369,26 @@
            background-color: #1eb8cd;
            color: white;
        }
+
+       /* Show dropdown on hover */
+        .navbar .dropdown:hover .dropdown-menu {
+            display: block;
+            margin-top: 0; /* Align neatly below the button */
+        }
+
+        .navbar .dropdown .dropdown-menu {
+            display: none;
+        }
+
        .dropdown-menu {
-    opacity: 0;
-    transform: translateY(-10px);
-    transition: all 0.3s ease;
-}
-.nav-links li.has-dropdown:hover .dropdown-menu {
-    opacity: 1;
-    transform: translateY(0);
-}
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+        .nav-links li.has-dropdown:hover .dropdown-menu {
+            opacity: 1;
+            transform: translateY(0);
+        }
 
        .call-info {
            text-align: right;

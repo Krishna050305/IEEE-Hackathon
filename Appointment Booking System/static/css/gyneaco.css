@@ -336,7 +336,15 @@
            color: #1eb8cd;
        }
 
-       
+       /* Show dropdown on hover */
+        .navbar .dropdown:hover .dropdown-menu {
+            display: block;
+            margin-top: 0; /* Align neatly below the button */
+        }
+
+        .navbar .dropdown .dropdown-menu {
+            display: none;
+        }
 
 
        .nav-links li.has-dropdown:hover .dropdown-menu {

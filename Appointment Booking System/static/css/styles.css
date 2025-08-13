@@ -150,6 +150,16 @@ p {
     box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
 }
 
+/* Show dropdown on hover */
+.navbar .dropdown:hover .dropdown-menu {
+    display: block;
+    margin-top: 0; /* Align neatly below the button */
+}
+
+.navbar .dropdown .dropdown-menu {
+    display: none;
+}
+
 
 .top-bar {
     background-color: #1a2a47;
