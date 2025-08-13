@@ -50,8 +50,10 @@
 }
 
 .user-dropdown:hover .dropdown-menu {
-    display: block;
-}
+            display: block !important;
+            opacity: 1;
+            visibility: visible;
+        }
 
 
         /* Show dropdown on hover */

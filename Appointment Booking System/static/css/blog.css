@@ -32,9 +32,11 @@
     z-index: 1000;
 }
 
-.user-dropdown:hover .dropdown-menu {
-    display: block;
-}
+    .user-dropdown:hover .dropdown-menu {
+            display: block !important;
+            opacity: 1;
+            visibility: visible;
+        }
 
 
 /* Show dropdown on hover */

@@ -150,9 +150,12 @@
 
         .user-dropdown:hover .dropdown-menu {
             display: block !important;
+            opacity: 1;
+            visibility: visible;
         }
 
         .dropdown-menu {
+            opacity : 1;
             display: none;
             position: absolute;
             top: 100%;
