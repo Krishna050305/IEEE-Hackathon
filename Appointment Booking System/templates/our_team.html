@@ -49,9 +49,9 @@
                 </div>
                 {% if user_name %}
                 <div class="dropdown user-dropdown">
-                    <a href="#" class="btn btn-primary dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span href="#" class="btn btn-primary dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                         Hello, {{ user_name }}
-                    </a>
+                    </span>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                         {% if role == "doctor" %}
                             <li><a class="dropdown-item" href="/doctor/dashboard">Dashboard</a></li>
