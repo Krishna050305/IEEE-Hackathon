@@ -101,7 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-
     document.addEventListener('click', (e) => {
         if (window.innerWidth <= 992) {
             if (navLinks && mobileMenuToggle && !navLinks.contains(e.target) && !mobileMenuToggle.contains(e.target)) {
@@ -121,11 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    const heroBackgroundImages = [
-        'https://via.placeholder.com/1200x800/d0e5f0/222222?text=Hero+Background+1',
-        'https://via.placeholder.com/1200x800/c5e0f5/222222?text=Hero+Background+2',
-        'https://via.placeholder.com/1200x800/b3d8f0/222222?text=Hero+Background+3'
-    ];
+    
     let currentSlide = 0;
 
     function updateHeroBackground() {
